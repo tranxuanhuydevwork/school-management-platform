@@ -1,0 +1,32 @@
+# =============================================
+# MyF3School Fullstack - Root .gitignore
+# =============================================
+
+# === IDE ===
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+
+# === OS ===
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# === Backend (Spring Boot / Maven) ===
+myf3school_backend/target/
+myf3school_backend/.mvn/wrapper/maven-wrapper.jar
+myf3school_backend/*.log
+
+# === Frontend (Flutter) ===
+myf3school_frontend/build/
+myf3school_frontend/.dart_tool/
+myf3school_frontend/.flutter-plugins
+myf3school_frontend/.flutter-plugins-dependencies
+myf3school_frontend/.packages
+myf3school_frontend/.pub-cache/
+myf3school_frontend/.pub/
+
+# === Gemini / AI assistant ===
+.gemini/
