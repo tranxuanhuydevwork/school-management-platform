@@ -1,12 +1,12 @@
 # CV Project Description / Bản mô tả dự án viết CV
 
-Tài liệu này cung cấp mô tả dự án **Educatrix** chuẩn chỉnh, bám sát toàn bộ mã nguồn thực tế của project `myf3school_backend` (thay vì bản LMS cũ). Bạn có thể copy và paste trực tiếp nội dung này vào CV xin việc của mình (tiếng Anh hoặc tiếng Việt).
+Tài liệu này cung cấp mô tả dự án **Fshool-management** chuẩn chỉnh, bám sát toàn bộ mã nguồn thực tế của project `myf3school_backend` (thay vì bản LMS cũ). Bạn có thể copy và paste trực tiếp nội dung này vào CV xin việc của mình (tiếng Anh hoặc tiếng Việt).
 
 ---
 
 ## 📑 1. Tiếng Anh (English Version - Recommended)
 
-### **EDUCATRIX – Enterprise School Management & Student Portal System**
+### **FSHOOL-MANAGEMENT – Enterprise School Management & Student Portal System**
 **Role:** Backend Developer  
 **Technologies:** Java 17, Spring Boot 3.2.5, Spring Security, JWT (JJwt 0.12.6), Spring Data JPA, Hibernate, MySQL 8.0, Spring WebSocket, Server-Sent Events (SSE), Twilio SDK (SMS & Voice Calls), JavaMail (SMTP), Thymeleaf, Spring Boot Actuator, JUnit 5, Maven  
 
@@ -26,7 +26,7 @@ An enterprise-grade, highly scalable school management and student portal system
 
 ## 📑 2. Tiếng Việt (Vietnamese Version)
 
-### **EDUCATRIX – Hệ Thống Quản Lý Trường Học & Cổng Thông Tin Học Sinh**
+### **FSHOOL-MANAGEMENT – Hệ Thống Quản Lý Trường Học & Cổng Thông Tin Học Sinh**
 **Vai trò:** Lập trình viên Backend (Backend Developer)  
 **Công nghệ sử dụng:** Java 17, Spring Boot 3.2.5, Spring Security, JWT (JJwt 0.12.6), Spring Data JPA, Hibernate, MySQL 8.0, Spring WebSocket, Server-Sent Events (SSE), Twilio SDK (SMS & Voice), JavaMail (SMTP), Thymeleaf, Spring Boot Actuator, JUnit 5, Maven  
 

@@ -1,4 +1,4 @@
-# Educatrix Backend - Hệ Thống Quản Lý Trường Học & Cổng Thông Tin Học Sinh Doanh Nghiệp
+# Fshool-management Backend - Hệ Thống Quản Lý Trường Học & Cổng Thông Tin Học Sinh Doanh Nghiệp
 [![Java](https://img.shields.io/badge/Java-17-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)](https://www.oracle.com/java/)
 [![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.2.5-6DB33F?style=for-the-badge&logo=spring-boot&logoColor=white)](https://spring.io/projects/spring-boot)
 [![Spring Security](https://img.shields.io/badge/Spring_Security-JWT-6DB33F?style=for-the-badge&logo=spring-security&logoColor=white)](https://spring.io/projects/spring-security)
@@ -6,13 +6,13 @@
 [![Twilio](https://img.shields.io/badge/Twilio-SMS_&_Voice-F22F46?style=for-the-badge&logo=twilio&logoColor=white)](https://www.twilio.com/)
 [![WebSockets](https://img.shields.io/badge/WebSockets-Real_Time-blueviolet?style=for-the-badge)](https://developer.mozilla.org/en-US/docs/Web/API/Websockets_API)
 
-**Educatrix Backend** là một hệ thống quản lý trường học và cổng thông tin học sinh (Student Portal) cấp doanh nghiệp, có khả năng mở rộng cao, được xây dựng trên nền tảng **Spring Boot 3.2.5** và **Java 17**. Dự án được thiết kế chuẩn chỉ theo nguyên lý **Clean Architecture / Domain-Driven Design (DDD)**, mang lại khả năng phân quyền đa vai trò bảo mật, truyền thông thời gian thực (real-time), quy trình chấm điểm và phúc khảo chặt chẽ, theo dõi rèn luyện và tự động hóa hóa đơn học phí.
+**Fshool-management Backend** là một hệ thống quản lý trường học và cổng thông tin học sinh (Student Portal) cấp doanh nghiệp, có khả năng mở rộng cao, được xây dựng trên nền tảng **Spring Boot 3.2.5** và **Java 17**. Dự án được thiết kế chuẩn chỉ theo nguyên lý **Clean Architecture / Domain-Driven Design (DDD)**, mang lại khả năng phân quyền đa vai trò bảo mật, truyền thông thời gian thực (real-time), quy trình chấm điểm và phúc khảo chặt chẽ, theo dõi rèn luyện và tự động hóa hóa đơn học phí.
 
 ---
 
 ## 🏗️ Kiến Trúc Hệ Thống (System Architecture)
 
-Educatrix áp dụng mô hình kiến trúc phân lớp rõ ràng (presentation, core business logic, và infrastructure). Thiết kế này giúp hệ thống dễ dàng viết Unit Test, bảo trì và mở rộng khi số lượng người dùng tăng cao.
+Fshool-management áp dụng mô hình kiến trúc phân lớp rõ ràng (presentation, core business logic, và infrastructure). Thiết kế này giúp hệ thống dễ dàng viết Unit Test, bảo trì và mở rộng khi số lượng người dùng tăng cao.
 
 ### Sơ Đồ Kiến Trúc Hệ Thống
 ![System Architecture](./assets/system_architecture.png)
