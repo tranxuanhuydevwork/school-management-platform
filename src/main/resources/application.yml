@@ -1,0 +1,5 @@
+app:
+  jwt:
+    secret: "your-secret-key-minimum-64-chars-for-HS512-here!!"
+    access-token-expiry-ms: 900000      # 15 phút
+    refresh-token-expiry-days: 30
