@@ -42,12 +42,3 @@ Hệ thống quản lý trường học và cổng thông tin học sinh cấp d
 *   **Tối ưu hóa hiệu năng bất đồng bộ:** Tăng tốc độ phản hồi của ứng dụng bằng cách xử lý bất đồng bộ (**`@Async`**) các tác vụ nặng như tạo hóa đơn hàng loạt và tự động gửi email nhắc nợ học phí qua SMTP JavaMail.
 *   **Kiểm thử & Giám sát:** Viết kiểm thử tự động với **JUnit 5** và **Spring Security Test** để kiểm thử bảo mật và logic nghiệp vụ, đồng thời tích hợp **Spring Boot Actuator** để giám sát tài nguyên và sức khỏe của hệ thống trực tiếp.
 
----
-
-## 💡 3. Các từ khóa & Điểm cộng đắt giá cần nhấn mạnh khi Phỏng vấn (Interview Tips)
-Khi nhà tuyển dụng hỏi về dự án này, hãy tập trung vào các điểm kỹ thuật nổi bật sau:
-1.  **Clean Architecture / DDD**: Hãy giải thích cách bạn chia folder dự án (`api`, `controller`, `application_service`, `infrastructure`) giúp code gọn gàng, độc lập với database thế nào.
-2.  **JWT Claims Optimization**: Nhấn mạnh việc lưu `studentId` và `classId` vào JWT để tránh việc mỗi request gửi lên lại phải gọi SQL để tìm học sinh thuộc lớp nào, từ đó tiết kiệm IO database.
-3.  **Refresh Token Rotation (RTR)**: Đây là điểm cộng cực lớn chứng tỏ bạn hiểu về bảo mật thực tế (production security).
-4.  **WebSocket kết hợp SSE**: Giải thích sự lựa chọn công nghệ (Dùng WebSocket cho chat 2 chiều, dùng SSE cho thông báo 1 chiều để nhẹ hơn và tiết kiệm tài nguyên máy chủ).
-5.  **Twilio MFA**: Giải thích quy trình xác thực SMS OTP và Voice Call tự động.

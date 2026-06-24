@@ -172,10 +172,3 @@ Cơ sở dữ liệu được thiết kế tối ưu hóa quan hệ nhằm phụ
 | **Thời gian thực**| `/ws-chat` | `WS` | Kết nối WebSocket để chat trực tuyến | Đã đăng nhập |
 | | `/api/notifications/stream` | `GET` | Luồng SSE nhận thông báo sự kiện tức thời | Đã đăng nhập |
 
----
-
-## 🏆 Các Điểm Cộng Đắt Giá Trong Mắt Nhà Tuyển Dụng (CV Highlight Points)
-*   **Ứng dụng Clean Architecture & DDD:** Phân lớp tường minh giúp tách biệt hoàn toàn nghiệp vụ cốt lõi khỏi database và thư viện ngoài, giúp hệ thống hoạt động ổn định và sẵn sàng chạy unit tests 100%.
-*   **Hệ thống bảo mật chuẩn sản xuất (Production-ready):** Áp dụng Spring Security kết hợp cơ chế xoay vòng Refresh Token (RTR) bảo mật cao, ghi nhận IP/Thiết bị đăng nhập để phòng tránh tấn công chiếm quyền phiên làm việc.
-*   **Tối ưu hóa tài nguyên qua Event Streaming:** Triển khai thành công WebSockets và Server-Sent Events (SSE), tối ưu băng thông máy chủ so với cơ chế HTTP Polling truyền thống.
-*   **Tích hợp tốt các hệ thống bên thứ 3:** Tự tay viết các adapter tích hợp hệ thống gửi SMS/Call tự động qua Twilio API và thông báo qua SMTP email.
