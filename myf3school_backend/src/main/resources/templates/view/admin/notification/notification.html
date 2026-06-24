@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+    <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Thông báo — MyF3School Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,400&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="/static/css/theme.css" />
+    <link rel="stylesheet" href="/static/css/layout.css" />
+    <link rel="stylesheet" href="/static/css/components.css" />
+    <style>
+        .notif-hist-item {
+            display: flex; gap: var(--space-3);
+            padding: var(--space-4) var(--space-5);
+            border-bottom: 1px solid var(--border);
+            cursor: pointer; transition: background var(--t-fast);
+            position: relative;
+        }
+        .notif-hist-item:hover { background: var(--bg-hover); }
+        .notif-hist-item.unread { background: rgba(79,142,247,.04); }
+        .notif-hist-item.unread::before {
+            content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+            width: 3px; background: var(--accent); border-radius: 0 2px 2px 0;
+        }
+        .reftype-badge {
+            display: inline-block; padding: 2px 8px;
+            border-radius: var(--radius-full); font-size: .65rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: .05em;
+        }
+        @media (max-width: 1024px) { .notif-layout { grid-template-columns: 1fr !important; } }
+    </style>
+</head>
+<body>
+
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <div class="logo"><div class="logo-mark"><span>F3</span></div><div class="logo-text"><strong>MyF3School</strong><small>Admin Portal</small></div></div>
+        <button class="sidebar-toggle" id="sidebarToggle"><i class="bi bi-layout-sidebar-reverse"></i></button>
+    </div>
+    <nav class="sidebar-nav">
+        <div class="nav-group"><span class="nav-label">Tổng quan</span><a href="/admin/dashboard" class="nav-item"><i class="bi bi-grid-1x2"></i><span>Dashboard</span></a></div>
+        <div class="nav-group"><span class="nav-label">Học tập</span>
+            <a href="/admin/courses"    class="nav-item"><i class="bi bi-journal-bookmark"></i><span>Môn học &amp; Lớp</span></a>
+            <a href="/admin/grades"     class="nav-item"><i class="bi bi-bar-chart-steps"></i><span>Điểm số</span></a>
+            <a href="/admin/attendance" class="nav-item"><i class="bi bi-person-check"></i><span>Điểm danh</span></a></div>
+        <div class="nav-group"><span class="nav-label">Quản lý</span>
+            <a href="/admin/accounts"     class="nav-item"><i class="bi bi-people"></i><span>Tài khoản</span></a>
+            <a href="/admin/applications" class="nav-item"><i class="bi bi-file-earmark-text"></i><span>Đơn từ</span><span class="badge badge-warn" id="sidebarAppBadge" style="display:none"></span></a>
+            <a href="/admin/clubs"        class="nav-item"><i class="bi bi-collection"></i><span>Câu lạc bộ</span></a></div>
+        <div class="nav-group"><span class="nav-label">Hệ thống</span>
+            <a href="/admin/notifications" class="nav-item active"><i class="bi bi-bell"></i><span>Thông báo</span><span class="badge badge-accent" id="sidebarNotifBadge" style="display:none"></span></a>
+            <a href="/admin/settings"      class="nav-item"><i class="bi bi-sliders"></i><span>Cài đặt</span></a></div>
+    </nav>
+    <div class="sidebar-footer">
+        <div class="user-chip"><div class="user-avatar">A</div>
+            <div class="user-info"><span class="user-name">Admin</span><span class="user-role">Administrator</span></div></div>
+        <a href="/auth/logout" class="logout-btn"><i class="bi bi-box-arrow-right"></i></a>
+    </div>
+</aside>
+
+<div class="main-wrapper" id="mainWrapper">
+    <header class="topbar">
+        <div class="topbar-left">
+            <button class="topbar-btn topbar-toggle-mobile" id="mobileSidebarToggle"><i class="bi bi-list"></i></button>
+            <div class="breadcrumb-trail">Hệ thống / Thông báo</div>
+        </div>
+        <div class="topbar-right">
+            <div class="live-clock" id="liveClock"></div>
+            <div class="rt-indicator" id="rtIndicator"><span class="rt-dot"></span><span class="rt-label">Live</span></div>
+            <button class="topbar-btn notif-btn" id="topbarNotifBtn"><i class="bi bi-bell"></i><span class="notif-count" id="topbarNotifCount" style="display:none">0</span></button>
+            <div class="notif-dropdown" id="notifDropdown">
+                <div class="notif-header"><span>Thông báo</span><button class="mark-all-read" id="markAllReadBtn">Đọc tất cả</button></div>
+                <div class="notif-list" id="notifList"><div class="notif-empty">Không có thông báo mới</div></div>
+            </div>
+            <button class="topbar-btn" id="themeToggle"><i class="bi bi-moon-stars"></i></button>
+        </div>
+    </header>
+
+    <main class="page-content">
+        <div class="page-header">
+            <div><h1 class="page-title">Thông báo</h1><p class="page-subtitle">Gửi và quản lý thông báo cho người dùng</p></div>
+            <div class="page-actions">
+                <button class="btn btn-primary" data-modal-open="sendNotifModal"><i class="bi bi-send-plus"></i> Gửi thông báo</button>
+            </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:380px 1fr;gap:var(--space-5);align-items:start" class="notif-layout">
+
+            <!-- Send Form Card -->
+            <div class="card" id="sendFormCard">
+                <div class="card-header"><div class="card-title"><i class="bi bi-megaphone"></i> Gửi thông báo mới</div></div>
+                <div style="display:flex;flex-direction:column;gap:var(--space-4)">
+                    <div class="form-group">
+                        <label class="form-label">User ID <span class="required">*</span></label>
+                        <div class="input-group"><i class="bi bi-person-badge input-group-icon"></i><input type="number" class="form-control" id="sendUserId" placeholder="ID người nhận"/></div>
+                    </div>
+                    <div class="form-group"><label class="form-label">Tiêu đề <span class="required">*</span></label><input type="text" class="form-control" id="sendTitle" placeholder="Tiêu đề thông báo" maxlength="100"/></div>
+                    <div class="form-group"><label class="form-label">Nội dung <span class="required">*</span></label><textarea class="form-control" id="sendMessage" placeholder="Nội dung thông báo…" rows="3"></textarea></div>
+                    <div class="form-grid" style="grid-template-columns:1fr 1fr">
+                        <div class="form-group"><label class="form-label">Loại tham chiếu</label>
+                            <select class="form-control" id="sendRefType">
+                                <option value="">Không có</option><option value="SCHEDULE">Lịch học</option>
+                                <option value="SCORE">Điểm số</option><option value="ATTENDANCE">Điểm danh</option>
+                                <option value="ENROLLMENT">Ghi danh</option><option value="APPLICATION">Đơn từ</option>
+                            </select></div>
+                        <div class="form-group"><label class="form-label">Ref ID</label><input type="number" class="form-control" id="sendRefId" placeholder="Tuỳ chọn"/></div>
+                    </div>
+                    <button class="btn btn-primary w-full" id="sendBtn" onclick="sendNotif()"><i class="bi bi-send"></i> Gửi thông báo</button>
+                </div>
+            </div>
+
+            <!-- Notification History -->
+            <div class="card" style="padding:0">
+                <div class="card-header" style="padding:var(--space-5) var(--space-6)">
+                    <div><div class="card-title">Lịch sử thông báo</div><div class="card-subtitle">User ID: <span id="historyUserId">—</span></div></div>
+                    <div class="card-actions">
+                        <div class="input-group" style="width:180px"><i class="bi bi-person input-group-icon"></i><input type="number" class="form-control" id="historyUserIdInput" placeholder="User ID" oninput="debounceLoadHistory()"/></div>
+                        <button class="btn btn-ghost btn-icon" onclick="markAllReadHistory()" title="Đọc tất cả"><i class="bi bi-check2-all"></i></button>
+                    </div>
+                </div>
+                <div id="historyList" style="min-height:300px">
+                    <div class="empty-state"><div class="empty-state-icon"><i class="bi bi-envelope-open"></i></div><div class="empty-state-title">Nhập User ID để xem lịch sử</div></div>
+                </div>
+                <div style="padding:var(--space-4) var(--space-5);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+                    <span class="text-sm text-muted" id="historyInfo"></span>
+                    <div class="pagination" id="historyPagination"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Send Notification Modal (same as form, for mobile/small screens) -->
+<div class="modal-overlay" id="sendNotifModal">
+    <div class="modal">
+        <div class="modal-header"><span class="modal-title">Gửi thông báo</span><button class="modal-close" data-modal-close="sendNotifModal"><i class="bi bi-x"></i></button></div>
+        <div class="modal-body">
+            <div class="form-group"><label class="form-label">User ID <span class="required">*</span></label><input type="number" class="form-control" id="mNotifUserId" placeholder="Nhập user ID"/></div>
+            <div class="form-group"><label class="form-label">Tiêu đề <span class="required">*</span></label><input type="text" class="form-control" id="mNotifTitle" placeholder="Tiêu đề thông báo"/></div>
+            <div class="form-group"><label class="form-label">Nội dung <span class="required">*</span></label><textarea class="form-control" id="mNotifMessage" placeholder="Nội dung thông báo..." rows="3"></textarea></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" data-modal-close="sendNotifModal">Hủy</button>
+            <button class="btn btn-primary" id="mSendBtn" onclick="sendNotifModal()"><i class="bi bi-send"></i> Gửi</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    window.F3_USER_ID  = /*[[${userId}]]*/ 1;
+    window.F3_API_BASE = /*[[${apiBase}]]*/ '/api';
+</script>
+<script src="/static/js/theme.js"></script>
+<script src="/static/js/realtime.js"></script>
+<script src="/static/js/layout.js"></script>
+<script>
+    let histPage  = 0;
+    let histTimer = null;
+    const PAGE_SIZE = 20;
+
+    const REF_COLORS = {
+        SCHEDULE:   { bg:'var(--info-soft)',    c:'var(--info)' },
+        SCORE:      { bg:'var(--success-soft)', c:'var(--success)' },
+        ATTENDANCE: { bg:'var(--warn-soft)',    c:'var(--warn)' },
+        ENROLLMENT: { bg:'var(--accent-soft)',  c:'var(--accent)' },
+        APPLICATION:{ bg:'var(--danger-soft)',  c:'var(--danger)' },
+    };
+
+    async function sendNotif() {
+        const btn     = document.getElementById('sendBtn');
+        const userId  = document.getElementById('sendUserId').value.trim();
+        const title   = document.getElementById('sendTitle').value.trim();
+        const message = document.getElementById('sendMessage').value.trim();
+        const refType = document.getElementById('sendRefType').value;
+        const refId   = document.getElementById('sendRefId').value;
+        if (!userId || !title || !message) { F3Toast.warn('Thiếu thông tin', 'userId, tiêu đề và nội dung là bắt buộc'); return; }
+        F3Loading(btn, true);
+        try {
+            await F3Api.post('/notifications', { userId:+userId, title, message, refType:refType||null, refId:refId?+refId:null });
+            F3Toast.success('Đã gửi', `Thông báo tới user #${userId}`);
+            ['sendTitle','sendMessage','sendRefId'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('historyUserIdInput').value = userId;
+            loadHistory(+userId, 0);
+        } catch (e) { F3Toast.danger('Lỗi', e.message); }
+        finally { F3Loading(btn, false); }
+    }
+
+    async function sendNotifModal() {
+        const btn     = document.getElementById('mSendBtn');
+        const userId  = document.getElementById('mNotifUserId').value.trim();
+        const title   = document.getElementById('mNotifTitle').value.trim();
+        const message = document.getElementById('mNotifMessage').value.trim();
+        if (!userId || !title || !message) { F3Toast.warn('Thiếu thông tin'); return; }
+        F3Loading(btn, true);
+        try {
+            await F3Api.post('/notifications', { userId:+userId, title, message });
+            F3Toast.success('Đã gửi', `Thông báo tới user #${userId}`);
+            F3Modal.close('sendNotifModal');
+        } catch (e) { F3Toast.danger('Lỗi', e.message); }
+        finally { F3Loading(btn, false); }
+    }
+
+    async function loadHistory(userId, page = 0) {
+        if (!userId) return;
+        histPage = page;
+        document.getElementById('historyUserId').textContent = userId;
+        document.getElementById('historyList').innerHTML = '<div class="spinner-center"><span class="spinner spinner-lg"></span></div>';
+
+        try {
+            const data  = await F3Api.get(`/notifications/users/${userId}?page=${page}&size=${PAGE_SIZE}`);
+            const items = data?.data?.content || data?.data || [];
+            const total = data?.data?.totalElements ?? items.length;
+            document.getElementById('historyInfo').textContent = `${total} thông báo`;
+
+            if (!items.length) {
+                document.getElementById('historyList').innerHTML = `<div class="empty-state"><div class="empty-state-icon"><i class="bi bi-bell-slash"></i></div><div class="empty-state-title">Không có thông báo</div></div>`;
+                document.getElementById('historyPagination').innerHTML = ''; return;
+            }
+
+            const refIcon = { SCHEDULE:'bi-calendar-event', SCORE:'bi-bar-chart', ATTENDANCE:'bi-person-check', ENROLLMENT:'bi-mortarboard', APPLICATION:'bi-file-earmark-text' };
+            document.getElementById('historyList').innerHTML = items.map(n => {
+                const rt = REF_COLORS[n.refType] || {};
+                return `<div class="notif-hist-item ${n.isRead?'':'unread'}" onclick="markRead(${n.id},${userId})">
+                    <div style="width:32px;height:32px;border-radius:50%;background:${rt.bg||'var(--bg-elevated)'};color:${rt.c||'var(--text-muted)'};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.75rem">
+                        <i class="bi ${refIcon[n.refType]||'bi-bell'}"></i>
+                    </div>
+                    <div style="flex:1;min-width:0">
+                        <div style="display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap;margin-bottom:3px">
+                            <span style="font-size:.83rem;font-weight:600;color:var(--text-primary)">${escHtml(n.title)}</span>
+                            ${n.refType ? `<span class="reftype-badge" style="background:${rt.bg||'var(--bg-elevated)'};color:${rt.c||'var(--text-muted)'}">${n.refType}</span>` : ''}
+                            ${!n.isRead ? '<span style="width:6px;height:6px;background:var(--accent);border-radius:50%;display:inline-block;flex-shrink:0"></span>' : ''}
+                        </div>
+                        <div style="font-size:.78rem;color:var(--text-secondary);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${escHtml(n.message)}</div>
+                        <div style="display:flex;align-items:center;gap:var(--space-3);margin-top:4px">
+                            <span style="font-size:.68rem;color:var(--text-muted)"><i class="bi bi-clock"></i> ${relTime(n.createdAt)}</span>
+                            ${n.isRead && n.readAt ? `<span style="font-size:.68rem;color:var(--text-muted)"><i class="bi bi-eye"></i> ${fmtDate(n.readAt)}</span>` : ''}
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+
+            renderHistPagination(total, userId);
+        } catch (e) {
+            document.getElementById('historyList').innerHTML = `<div class="empty-state"><div class="empty-state-icon"><i class="bi bi-exclamation-triangle"></i></div><div class="empty-state-desc">${escHtml(e.message)}</div></div>`;
+        }
+    }
+
+    async function markRead(notifId, userId) {
+        try { await F3Api.put(`/notifications/${notifId}/read`); } catch (_) {}
+        loadHistory(userId, histPage);
+    }
+
+    async function markAllReadHistory() {
+        const userId = document.getElementById('historyUserIdInput').value;
+        if (!userId) { F3Toast.warn('Chưa chọn user'); return; }
+        try {
+            await F3Api.put(`/notifications/users/${userId}/read-all`);
+            F3Toast.success('Đã đọc tất cả');
+            loadHistory(+userId, histPage);
+        } catch (e) { F3Toast.danger('Lỗi', e.message); }
+    }
+
+    function renderHistPagination(total, userId) {
+        const pages = Math.ceil(total / PAGE_SIZE);
+        const pg = document.getElementById('historyPagination');
+        if (pages <= 1) { pg.innerHTML = ''; return; }
+        let html = `<button class="page-btn" ${histPage===0?'disabled':''} onclick="loadHistory(${userId},${histPage-1})"><i class="bi bi-chevron-left"></i></button>`;
+        for (let i = 0; i < Math.min(pages, 7); i++) {
+            html += `<button class="page-btn ${i===histPage?'active':''}" onclick="loadHistory(${userId},${i})">${i+1}</button>`;
+        }
+        html += `<button class="page-btn" ${histPage>=pages-1?'disabled':''} onclick="loadHistory(${userId},${histPage+1})"><i class="bi bi-chevron-right"></i></button>`;
+        pg.innerHTML = html;
+    }
+
+    function debounceLoadHistory() {
+        clearTimeout(histTimer);
+        const uid = document.getElementById('historyUserIdInput').value;
+        if (!uid) return;
+        histTimer = setTimeout(() => loadHistory(+uid, 0), 500);
+    }
+
+    window.addEventListener('f3:notification', () => {
+        const uid = document.getElementById('historyUserIdInput').value;
+        if (uid) loadHistory(+uid, histPage);
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const uid = window.F3_USER_ID;
+        if (uid) { document.getElementById('historyUserIdInput').value = uid; loadHistory(uid, 0); }
+    });
+</script>
+</body>
+</html>
