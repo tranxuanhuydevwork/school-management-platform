@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+    <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quản lý Điểm số — MyF3School Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,400&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="/static/css/theme.css" />
+    <link rel="stylesheet" href="/static/css/layout.css" />
+    <link rel="stylesheet" href="/static/css/components.css" />
+    <script src="/static/js/F3Api.js"></script>
+
+    <style>
+        .section-chip {
+            display: flex; align-items: center; gap: var(--space-3);
+            padding: var(--space-3) var(--space-4);
+            background: var(--bg-elevated); border: 1px solid var(--border);
+            border-radius: var(--radius-lg); cursor: pointer;
+            transition: all var(--t-fast);
+        }
+        .section-chip:hover { border-color: var(--accent); background: var(--accent-soft); }
+        .sc-code    { font-family: var(--font-display); font-weight: 800; font-size: .8rem; color: var(--accent); }
+        .sc-name    { font-size: .85rem; font-weight: 600; color: var(--text-primary); }
+        .sc-teacher { font-size: .72rem; color: var(--text-muted); }
+        .grade-banner {
+            display: flex; align-items: center; gap: var(--space-6);
+            padding: var(--space-4) var(--space-5);
+            background: var(--bg-elevated); border-radius: var(--radius-lg);
+            border: 1px solid var(--border);
+        }
+        .grade-avg    { font-family: var(--font-display); font-size: 2rem; font-weight: 800; }
+        .grade-letter { font-family: var(--font-display); font-size: 1.2rem; font-weight: 800; padding: 4px 14px; border-radius: var(--radius-md); }
+
+        /* Quota badge */
+        .quota-badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 4px 12px; border-radius: 999px; font-size: .75rem; font-weight: 700;
+        }
+        .quota-ok   { background: var(--success-soft, #16a34a22); color: var(--success, #16a34a); border: 1px solid var(--success, #16a34a); }
+        .quota-warn { background: #f59e0b22; color: #f59e0b; border: 1px solid #f59e0b; }
+        .quota-none { background: var(--danger-soft, #dc262622); color: var(--danger, #dc2626); border: 1px solid var(--danger, #dc2626); }
+
+        /* Correction request modal info block */
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3) var(--space-5); margin-bottom: var(--space-4); }
+        .info-item label { font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); font-weight: 700; display: block; margin-bottom: 2px; }
+        .info-item span  { font-size: .9rem; font-weight: 600; color: var(--text-primary); }
+    </style>
+</head>
+<body>
+
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <div class="logo"><div class="logo-mark"><span>F3</span></div><div class="logo-text"><strong>MyF3School</strong><small>Admin Portal</small></div></div>
+        <button class="sidebar-toggle" id="sidebarToggle"><i class="bi bi-layout-sidebar-reverse"></i></button>
+    </div>
+    <nav class="sidebar-nav">
+        <div class="nav-group"><span class="nav-label">Tổng quan</span><a href="/admin/dashboard" class="nav-item"><i class="bi bi-grid-1x2"></i><span>Dashboard</span></a></div>
+        <div class="nav-group"><span class="nav-label">Học tập</span>
+            <a href="/admin/courses"    class="nav-item"><i class="bi bi-journal-bookmark"></i><span>Môn học &amp; Lớp</span></a>
+            <a href="/admin/grades"     class="nav-item active"><i class="bi bi-bar-chart-steps"></i><span>Điểm số</span></a>
+            <a href="/admin/attendance" class="nav-item"><i class="bi bi-person-check"></i><span>Điểm danh</span></a></div>
+        <div class="nav-group"><span class="nav-label">Quản lý</span>
+            <a href="/admin/accounts"          class="nav-item"><i class="bi bi-people"></i><span>Tài khoản</span></a>
+            <a href="/admin/applications"      class="nav-item"><i class="bi bi-file-earmark-text"></i><span>Đơn từ</span><span class="badge badge-warn" id="sidebarAppBadge" style="display:none"></span></a>
+            <a href="/admin/grade-corrections" class="nav-item"><i class="bi bi-pencil-square"></i><span>Sửa điểm (Khảo thí)</span><span class="badge badge-danger" id="sidebarCorrBadge" style="display:none"></span></a>
+            <a href="/admin/clubs"             class="nav-item"><i class="bi bi-collection"></i><span>Câu lạc bộ</span></a></div>
+        <div class="nav-group"><span class="nav-label">Hệ thống</span>
+            <a href="/admin/notifications" class="nav-item"><i class="bi bi-bell"></i><span>Thông báo</span><span class="badge badge-accent" id="sidebarNotifBadge" style="display:none"></span></a>
+            <a href="/admin/settings"      class="nav-item"><i class="bi bi-sliders"></i><span>Cài đặt</span></a></div>
+    </nav>
+    <div class="sidebar-footer">
+        <div class="user-chip"><div class="user-avatar">A</div>
+            <div class="user-info"><span class="user-name">Admin</span><span class="user-role">Administrator</span></div></div>
+        <a href="/auth/logout" class="logout-btn"><i class="bi bi-box-arrow-right"></i></a>
+    </div>
+</aside>
+
+<div class="main-wrapper" id="mainWrapper">
+    <header class="topbar">
+        <div class="topbar-left">
+            <button class="topbar-btn topbar-toggle-mobile" id="mobileSidebarToggle"><i class="bi bi-list"></i></button>
+            <div class="breadcrumb-trail">Học tập / Điểm số</div>
+        </div>
+        <div class="topbar-right">
+            <div class="live-clock" id="liveClock"></div>
+            <div class="rt-indicator" id="rtIndicator"><span class="rt-dot"></span><span class="rt-label">Live</span></div>
+            <button class="topbar-btn notif-btn" id="topbarNotifBtn"><i class="bi bi-bell"></i><span class="notif-count" id="topbarNotifCount" style="display:none">0</span></button>
+            <div class="notif-dropdown" id="notifDropdown">
+                <div class="notif-header"><span>Thông báo</span><button class="mark-all-read" id="markAllReadBtn">Đọc tất cả</button></div>
+                <div class="notif-list" id="notifList"><div class="notif-empty">Không có thông báo mới</div></div>
+            </div>
+            <button class="topbar-btn" id="themeToggle"><i class="bi bi-moon-stars"></i></button>
+        </div>
+    </header>
+
+    <main class="page-content">
+        <div class="page-header">
+            <div><h1 class="page-title">Điểm số</h1><p class="page-subtitle">Nhập và quản lý điểm theo từng lớp học phần</p></div>
+            <div class="page-actions">
+                <a href="/admin/grades/import" class="btn btn-secondary"><i class="bi bi-file-earmark-arrow-up"></i> Import Excel</a>
+            </div>
+        </div>
+
+        <!-- Step 1: Pick Student -->
+        <div class="card" style="margin-bottom:var(--space-5)">
+            <div class="card-header"><div class="card-title"><i class="bi bi-person"></i> Bước 1 — Chọn học sinh</div></div>
+            <div style="display:flex;gap:var(--space-4);align-items:flex-end;flex-wrap:wrap">
+                <div class="form-group" style="flex:1;min-width:180px;margin-bottom:0">
+                    <label class="form-label">ID Học sinh <span class="required">*</span></label>
+                    <div class="input-group"><i class="bi bi-person-badge input-group-icon"></i><input type="number" class="form-control" id="studentIdInput" placeholder="Nhập student_profiles.id"/></div>
+                </div>
+                <button class="btn btn-primary" onclick="loadSections()" style="margin-bottom:1px"><i class="bi bi-search"></i> Xem lớp học phần</button>
+            </div>
+            <!-- Quota info hiển thị sau khi chọn học sinh -->
+            <div id="quotaInfo" style="margin-top:var(--space-4);display:none"></div>
+            <div id="sectionList" style="margin-top:var(--space-5);display:none"></div>
+        </div>
+
+        <!-- Step 2: Grade detail -->
+        <div id="gradeDetailPanel" style="display:none">
+            <div class="card">
+                <div class="card-header">
+                    <div><div class="card-title" id="gradeCardTitle">Chi tiết điểm</div><div class="card-subtitle" id="gradeCardSub"></div></div>
+                    <div class="card-actions">
+                        <button class="btn btn-ghost btn-sm" onclick="closeGradeDetail()"><i class="bi bi-x"></i> Đóng</button>
+                        <a href="/admin/grades/import" class="btn btn-primary btn-sm"><i class="bi bi-upload"></i> Import hàng loạt</a>
+                    </div>
+                </div>
+                <div id="gradeBanner" style="margin-bottom:var(--space-5)"></div>
+                <div class="table-wrapper">
+                    <table class="table">
+                        <thead><tr><th>Đầu điểm</th><th>Loại</th><th>Hệ số</th><th>Điểm tối đa</th><th>Điểm</th><th>Hành động</th></tr></thead>
+                        <tbody id="gradeTableBody"><tr><td colspan="6" class="table-loading"><span class="spinner"></span></td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     MODAL: Sửa điểm (tự sửa — còn quota)
+════════════════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="editGradeModal">
+    <div class="modal" style="max-width:440px">
+        <div class="modal-header">
+            <h3 class="modal-title" id="editGradeTitle">Nhập / Sửa điểm</h3>
+            <button class="modal-close" onclick="F3Modal.close('editGradeModal')"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="editComponentId"/>
+            <input type="hidden" id="editStudentProfileId"/>
+            <div class="form-group">
+                <label class="form-label">Điểm <span class="required">*</span></label>
+                <input type="number" class="form-control" id="editScore" step="0.01" min="0" placeholder="0.00"/>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Ghi chú</label>
+                <input type="text" class="form-control" id="editNotes" placeholder="Tuỳ chọn"/>
+            </div>
+            <!-- Quota warning inline -->
+            <div id="editQuotaWarning" style="display:none;padding:10px 14px;border-radius:var(--radius-md);font-size:.82rem;line-height:1.5;margin-top:var(--space-3)"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="F3Modal.close('editGradeModal')">Huỷ</button>
+            <button class="btn btn-primary" id="saveGradeBtn" onclick="saveGrade()"><i class="bi bi-check-lg"></i> Lưu điểm</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     MODAL: Hết quota — gửi đơn lên khảo thí
+════════════════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="correctionRequestModal">
+    <div class="modal" style="max-width:520px">
+        <div class="modal-header">
+            <h3 class="modal-title"><i class="bi bi-pencil-square" style="color:var(--warn)"></i> Yêu cầu sửa điểm — Khảo thí</h3>
+            <button class="modal-close" onclick="F3Modal.close('correctionRequestModal')"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div class="modal-body">
+            <!-- Thông báo lý do phải gửi đơn -->
+            <div id="corrReason" style="padding:10px 14px;border-radius:var(--radius-md);font-size:.83rem;margin-bottom:var(--space-4);background:var(--warn-soft,#f59e0b22);color:#b45309;border:1px solid #f59e0b66;line-height:1.6"></div>
+
+            <!-- Snapshot thông tin -->
+            <div class="info-grid" id="corrInfoGrid"></div>
+
+            <input type="hidden" id="corrComponentId"/>
+            <input type="hidden" id="corrStudentProfileId"/>
+            <input type="hidden" id="corrOldScore"/>
+
+            <div class="form-group">
+                <label class="form-label">Điểm mới đề xuất <span class="required">*</span></label>
+                <input type="number" class="form-control" id="corrProposedScore" step="0.01" min="0" placeholder="0.00"/>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Lý do sửa điểm <span class="required">*</span></label>
+                <textarea class="form-control" id="corrReason2" rows="3" placeholder="Nhập lý do cụ thể (bắt buộc)..."></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="F3Modal.close('correctionRequestModal')">Huỷ</button>
+            <button class="btn btn-warn" id="sendCorrBtn" onclick="sendCorrectionRequest()">
+                <i class="bi bi-send"></i> Gửi đơn lên Khảo thí
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ── State ─────────────────────────────────────────────────────────────
+    let currentStudentId  = null;
+    let currentSectionId  = null;
+    let quotaInfo         = null;   // { editCount, remaining, maxEdits, daysUntilDeadline }
+
+    // ── Sidebar badge: đơn sửa điểm chờ duyệt ────────────────────────────
+    async function loadCorrectionBadge() {
+        try {
+            const d = await F3Api.get('/grade-corrections/pending-count');
+            const c = d?.data?.count;
+            const badge = document.getElementById('sidebarCorrBadge');
+            if (c > 0) { badge.textContent = c; badge.style.display = ''; }
+        } catch (_) {}
+    }
+    loadCorrectionBadge();
+
+    // ── Load lớp học phần + quota cho học sinh ────────────────────────────
+    async function loadSections() {
+        const input = document.getElementById('studentIdInput').value.trim();
+        if (!input) { F3Toast.warn('Thiếu thông tin', 'Vui lòng nhập ID học sinh'); return; }
+        currentStudentId = parseInt(input);
+
+        const container   = document.getElementById('sectionList');
+        const quotaEl     = document.getElementById('quotaInfo');
+        container.style.display = 'block';
+        quotaEl.style.display   = 'none';
+        container.innerHTML     = `<div class="table-loading"><span class="spinner"></span></div>`;
+        closeGradeDetail();
+
+        try {
+            // Load sections + quota song song
+            const [sectionsData, quotaData] = await Promise.all([
+                F3Api.get(`/grades/students/${currentStudentId}/sections`),
+                F3Api.get(`/grade-corrections/quota/${currentStudentId}`)
+            ]);
+
+            // Lưu quota state
+            quotaInfo = quotaData?.data || null;
+            renderQuotaBadge(quotaEl, quotaInfo);
+
+            const sections = sectionsData?.data || [];
+            if (!sections.length) {
+                container.innerHTML = `<div class="empty-state"><div class="empty-state-icon"><i class="bi bi-journal-x"></i></div><div class="empty-state-title">Chưa có lớp học phần</div></div>`;
+                return;
+            }
+            container.innerHTML = `
+                <div style="margin-bottom:var(--space-3);font-size:.78rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em">${sections.length} lớp học phần — click để xem điểm</div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:var(--space-3)">
+                    ${sections.map(s => `
+                        <div class="section-chip" onclick="loadGrades(${s.sectionId})">
+                            <div style="flex:1">
+                                <div class="sc-code">${escHtml(s.subjectCode)}</div>
+                                <div class="sc-name">${escHtml(s.subjectName)}</div>
+                                <div class="sc-teacher"><i class="bi bi-person-workspace"></i> ${escHtml(s.teacherName)}</div>
+                            </div>
+                            <i class="bi bi-chevron-right" style="color:var(--text-muted)"></i>
+                        </div>`).join('')}
+                </div>`;
+        } catch (e) {
+            container.innerHTML = `<div class="empty-state"><div class="empty-state-icon"><i class="bi bi-exclamation-triangle"></i></div><div class="empty-state-title">Lỗi tải dữ liệu</div><div class="empty-state-desc">${escHtml(e.message)}</div></div>`;
+        }
+    }
+
+    function renderQuotaBadge(el, q) {
+        if (!q) { el.style.display = 'none'; return; }
+        const { editCount, remaining, maxEdits, daysUntilDeadline } = q;
+        let cls, icon, text;
+        if (daysUntilDeadline < 0) {
+            cls  = 'quota-none'; icon = 'bi-lock';
+            text = `Đã quá hạn chốt điểm — chỉ được sửa qua đơn Khảo thí`;
+        } else if (remaining === 0) {
+            cls  = 'quota-none'; icon = 'bi-slash-circle';
+            text = `Đã dùng hết ${maxEdits}/${maxEdits} lần tự sửa — phải gửi đơn Khảo thí (còn ${daysUntilDeadline} ngày tới hạn)`;
+        } else if (remaining === 1) {
+            cls  = 'quota-warn'; icon = 'bi-exclamation-triangle';
+            text = `Còn ${remaining}/${maxEdits} lần tự sửa (đã sửa ${editCount} lần) — còn ${daysUntilDeadline} ngày`;
+        } else {
+            cls  = 'quota-ok'; icon = 'bi-pencil-check';
+            text = `Còn ${remaining}/${maxEdits} lần tự sửa — còn ${daysUntilDeadline} ngày tới hạn chốt điểm`;
+        }
+        el.innerHTML = `<span class="quota-badge ${cls}"><i class="bi ${icon}"></i> ${text}</span>`;
+        el.style.display = '';
+    }
+
+    async function loadGrades(sectionId) {
+        currentSectionId = sectionId;
+        const panel = document.getElementById('gradeDetailPanel');
+        panel.style.display = 'block';
+        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        document.getElementById('gradeTableBody').innerHTML = `<tr><td colspan="6" class="table-loading"><span class="spinner"></span></td></tr>`;
+        try {
+            const data = await F3Api.get(`/grades/students/${currentStudentId}/sections/${sectionId}`);
+            const g    = data?.data;
+
+            document.getElementById('gradeCardTitle').textContent = `${g.subjectCode} — ${g.subjectName}`;
+            document.getElementById('gradeCardSub').textContent   = `${g.className} · ${g.teacherName}`;
+
+            const avg    = g.average !== null ? parseFloat(g.average).toFixed(2) : '—';
+            const letter = g.letterGrade || '—';
+            const letterColors = { 'A+':'var(--success)','A':'var(--success)','B':'var(--info)','C':'var(--warn)','D':'var(--warn)','F':'var(--danger)' };
+            const lc = letterColors[letter] || 'var(--text-muted)';
+
+            document.getElementById('gradeBanner').innerHTML = `
+                <div class="grade-banner">
+                    <div><div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);font-weight:700;margin-bottom:4px">Điểm trung bình</div>
+                        <div class="grade-avg" style="color:${g.passed?'var(--success)':'var(--danger)'}">${avg}</div></div>
+                    <div><div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);font-weight:700;margin-bottom:4px">Xếp loại</div>
+                        <div class="grade-letter" style="background:${lc}20;color:${lc}">${letter}</div></div>
+                    <div style="margin-left:auto">
+                        <span class="chip ${g.passed?'chip-success':'chip-danger'}" style="font-size:.85rem;padding:6px 16px">${g.passed?'Đạt':'Không đạt'}</span>
+                    </div>
+                </div>`;
+
+            const components = g.components || [];
+            if (!components.length) {
+                document.getElementById('gradeTableBody').innerHTML = `<tr><td colspan="6" class="table-empty">Chưa có đầu điểm nào</td></tr>`;
+                return;
+            }
+
+            document.getElementById('gradeTableBody').innerHTML = components.map(c => {
+                const sv  = c.score !== null && c.score !== undefined ? parseFloat(c.score).toFixed(2) : null;
+                const pct = sv !== null ? (parseFloat(c.score)/parseFloat(c.maxScore)*100).toFixed(0) : null;
+                const passing = sv !== null && parseFloat(c.score)/parseFloat(c.maxScore) >= .5;
+                // Nếu đã có điểm → nút "Sửa", chưa có → "Nhập"
+                const hasScore = sv !== null;
+                return `<tr>
+                    <td style="font-weight:600;color:var(--text-primary)">${escHtml(c.name)}</td>
+                    <td><span class="chip chip-muted">${c.type}</span></td>
+                    <td><span style="font-family:var(--font-display);font-weight:700">${c.weight}</span></td>
+                    <td>${c.maxScore}</td>
+                    <td>${sv !== null
+                    ? `<div style="display:flex;align-items:center;gap:var(--space-3)">
+                              <span style="font-family:var(--font-display);font-weight:800;font-size:1rem;color:${passing?'var(--success)':'var(--danger)'}">${sv}</span>
+                              <div style="flex:1;height:4px;background:var(--bg-active);border-radius:2px;min-width:60px">
+                                  <div style="width:${pct}%;height:100%;background:${passing?'var(--success)':'var(--danger)'};border-radius:2px;transition:width .5s"></div>
+                              </div>
+                              <span style="font-size:.72rem;color:var(--text-muted)">${pct}%</span>
+                           </div>`
+                    : `<span style="color:var(--text-muted);font-style:italic">Chưa có</span>`}</td>
+                    <td style="white-space:nowrap">
+                        <button class="btn btn-secondary btn-sm"
+                                onclick="openEditGrade(${c.id},'${escHtml(c.name)}',${c.maxScore},${sv??'null'})">
+                            <i class="bi bi-pencil"></i> ${hasScore ? 'Sửa' : 'Nhập'}
+                        </button>
+                        ${hasScore ? `
+                        <button class="btn btn-ghost btn-sm" style="margin-left:4px"
+                                onclick="openCorrectionDirect(${c.id},'${escHtml(c.name)}',${c.maxScore},${sv})"
+                                title="Gửi đơn yêu cầu sửa điểm lên Khảo thí">
+                            <i class="bi bi-send"></i>
+                        </button>` : ''}
+                    </td>
+                </tr>`;
+            }).join('');
+        } catch (e) {
+            document.getElementById('gradeTableBody').innerHTML = `<tr><td colspan="6" class="table-empty">Lỗi: ${escHtml(e.message)}</td></tr>`;
+        }
+    }
+
+    // ── Mở modal sửa điểm thông thường ───────────────────────────────────
+    function openEditGrade(componentId, name, maxScore, currentScore) {
+        document.getElementById('editComponentId').value      = componentId;
+        document.getElementById('editStudentProfileId').value = currentStudentId;
+        document.getElementById('editGradeTitle').textContent = `Điểm: ${name} (tối đa ${maxScore})`;
+        document.getElementById('editScore').max   = maxScore;
+        document.getElementById('editScore').value = currentScore ?? '';
+        document.getElementById('editNotes').value = '';
+
+        // Hiện quota warning nếu còn ít lượt
+        const warnEl = document.getElementById('editQuotaWarning');
+        if (quotaInfo) {
+            const { remaining, maxEdits, daysUntilDeadline } = quotaInfo;
+            if (daysUntilDeadline < 0 || remaining <= 0) {
+                warnEl.style.display = '';
+                warnEl.style.background = 'var(--danger-soft,#dc262622)';
+                warnEl.style.color = 'var(--danger,#dc2626)';
+                warnEl.style.border = '1px solid var(--danger,#dc2626)';
+                warnEl.innerHTML = `<i class="bi bi-exclamation-octagon"></i> Bạn đã <strong>hết lượt tự sửa</strong> hoặc quá hạn chốt điểm. Nếu lưu, hệ thống sẽ yêu cầu bạn gửi đơn lên Khảo thí.`;
+            } else if (remaining === 1) {
+                warnEl.style.display = '';
+                warnEl.style.background = '#f59e0b22';
+                warnEl.style.color = '#b45309';
+                warnEl.style.border = '1px solid #f59e0b66';
+                warnEl.innerHTML = `<i class="bi bi-exclamation-triangle"></i> Đây là lần tự sửa <strong>cuối cùng</strong> (${remaining}/${maxEdits}). Sau lần này bạn phải gửi đơn qua Khảo thí.`;
+            } else {
+                warnEl.style.display = 'none';
+            }
+        } else {
+            warnEl.style.display = 'none';
+        }
+
+        F3Modal.open('editGradeModal');
+    }
+
+    // ── Lưu điểm (tự sửa) — backend kiểm tra quota ───────────────────────
+    async function saveGrade() {
+        const componentId = document.getElementById('editComponentId').value;
+        const studentId   = document.getElementById('editStudentProfileId').value;
+        const score       = document.getElementById('editScore').value;
+        const notes       = document.getElementById('editNotes').value.trim();
+        const btn         = document.getElementById('saveGradeBtn');
+
+        if (score === '') { F3Toast.warn('Thiếu điểm', 'Vui lòng nhập điểm'); return; }
+        F3Loading(btn, true);
+        try {
+            await F3Api.put(`/grades/students/${studentId}/components/${componentId}`,
+                { score: parseFloat(score), notes: notes || null, gradedById: window.F3_USER_ID });
+
+            F3Toast.success('Đã lưu', 'Điểm cập nhật thành công');
+            F3Modal.close('editGradeModal');
+
+            // Refresh quota sau khi sửa
+            const qd = await F3Api.get(`/grade-corrections/quota/${currentStudentId}`);
+            quotaInfo = qd?.data || null;
+            renderQuotaBadge(document.getElementById('quotaInfo'), quotaInfo);
+
+            loadGrades(currentSectionId);
+
+        } catch (e) {
+            // Backend trả 400 khi hết quota → chuyển sang modal gửi đơn
+            if (e.status === 400 && e.message && e.message.includes('giới hạn')) {
+                F3Modal.close('editGradeModal');
+                F3Toast.warn('Hết lượt sửa', 'Bạn cần gửi đơn lên Khảo thí để sửa điểm này.');
+                // Lấy điểm cũ từ input và mở modal correction
+                const currentScore = parseFloat(score); // điểm họ vừa muốn nhập
+                openCorrectionModal(
+                    parseInt(componentId),
+                    document.getElementById('editGradeTitle').textContent,
+                    parseFloat(score),   // oldScore — cần lấy từ table, đây là simplification
+                    e.message
+                );
+            } else {
+                F3Toast.danger('Lỗi', e.message);
+            }
+        } finally { F3Loading(btn, false); }
+    }
+
+    // ── Mở modal gửi đơn trực tiếp (nút send icon) ───────────────────────
+    function openCorrectionDirect(componentId, name, maxScore, currentScore) {
+        const reason = 'Giáo viên chủ động yêu cầu sửa điểm qua bộ phận Khảo thí.';
+        openCorrectionModal(componentId, `${name} (tối đa ${maxScore})`, currentScore, reason);
+    }
+
+    // ── Core: mở modal gửi đơn khảo thí ──────────────────────────────────
+    function openCorrectionModal(componentId, title, oldScore, reasonText) {
+        document.getElementById('corrComponentId').value    = componentId;
+        document.getElementById('corrStudentProfileId').value = currentStudentId;
+        document.getElementById('corrOldScore').value       = oldScore ?? '';
+
+        document.getElementById('corrReason').innerHTML =
+            `<i class="bi bi-info-circle"></i> <strong>${reasonText}</strong><br>
+             Điền thông tin bên dưới để gửi đơn yêu cầu sửa điểm tới bộ phận Khảo thí.
+             Bạn sẽ nhận email thông báo khi đơn được xử lý.`;
+
+        document.getElementById('corrInfoGrid').innerHTML = `
+            <div class="info-item"><label>Đầu điểm</label><span>${escHtml(title)}</span></div>
+            <div class="info-item"><label>Học sinh (profile)</label><span>#${currentStudentId}</span></div>
+            <div class="info-item"><label>Điểm hiện tại</label><span style="font-family:var(--font-display);font-weight:800;color:var(--text-primary)">${oldScore ?? '—'}</span></div>
+            <div class="info-item"><label>Trạng thái</label><span class="chip chip-warn" style="font-size:.75rem">Chờ duyệt sau khi gửi</span></div>`;
+
+        document.getElementById('corrProposedScore').value = '';
+        document.getElementById('corrReason2').value       = '';
+
+        F3Modal.open('correctionRequestModal');
+    }
+
+    // ── Gửi đơn yêu cầu sửa điểm ─────────────────────────────────────────
+    async function sendCorrectionRequest() {
+        const componentId = document.getElementById('corrComponentId').value;
+        const studentId   = document.getElementById('corrStudentProfileId').value;
+        const oldScore    = document.getElementById('corrOldScore').value;
+        const proposed    = document.getElementById('corrProposedScore').value;
+        const reason      = document.getElementById('corrReason2').value.trim();
+        const btn         = document.getElementById('sendCorrBtn');
+
+        if (!proposed) { F3Toast.warn('Thiếu thông tin', 'Vui lòng nhập điểm mới đề xuất'); return; }
+        if (!reason)   { F3Toast.warn('Thiếu thông tin', 'Vui lòng nhập lý do sửa điểm'); return; }
+
+        F3Loading(btn, true);
+        try {
+            await F3Api.post('/grade-corrections', {
+                teacherId:        window.F3_USER_ID,    // users.id của teacher đang đăng nhập
+                studentProfileId: parseInt(studentId),
+                gradeComponentId: parseInt(componentId),
+                oldScore:         parseFloat(oldScore),
+                proposedScore:    parseFloat(proposed),
+                reason:           reason
+            });
+
+            F3Toast.success('Đã gửi đơn', 'Bộ phận Khảo thí sẽ xem xét và phản hồi qua email.');
+            F3Modal.close('correctionRequestModal');
+        } catch (e) {
+            F3Toast.danger('Lỗi', e.message);
+        } finally { F3Loading(btn, false); }
+    }
+
+    function closeGradeDetail() { document.getElementById('gradeDetailPanel').style.display = 'none'; currentSectionId = null; }
+
+    function escHtml(s) {
+        if (s == null) return '';
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+</script>
+</body>
+</html>

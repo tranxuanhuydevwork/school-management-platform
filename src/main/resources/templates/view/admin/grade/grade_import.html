@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+    <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Import Điểm từ Excel — MyF3School Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,400&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="/static/css/theme.css" />
+    <link rel="stylesheet" href="/static/css/layout.css" />
+    <link rel="stylesheet" href="/static/css/components.css" />
+    <!-- SheetJS for Excel parsing in browser -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        /* ── Drop Zone ── */
+        .drop-zone {
+            border: 2px dashed var(--border); border-radius: var(--radius-xl);
+            background: var(--bg-elevated); padding: var(--space-12) var(--space-8);
+            text-align: center; cursor: pointer;
+            transition: all var(--t-base) var(--ease-out);
+            position: relative; overflow: hidden;
+        }
+        .drop-zone::before {
+            content: ''; position: absolute; inset: 0;
+            background: radial-gradient(ellipse at center, var(--accent-soft) 0%, transparent 70%);
+            opacity: 0; transition: opacity var(--t-base); pointer-events: none;
+        }
+        .drop-zone:hover, .drop-zone.drag-over { border-color: var(--accent); border-style: solid; }
+        .drop-zone:hover::before, .drop-zone.drag-over::before { opacity: 1; }
+        .drop-zone.drag-over { transform: scale(1.01); }
+        .drop-icon {
+            width: 64px; height: 64px; background: var(--accent-soft); border-radius: var(--radius-xl);
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto var(--space-4); font-size: 1.8rem; color: var(--accent);
+            transition: transform var(--t-base) var(--ease-out);
+        }
+        .drop-zone:hover .drop-icon, .drop-zone.drag-over .drop-icon { transform: scale(1.15) rotate(-5deg); }
+        .drop-title { font-family: var(--font-display); font-size: 1.1rem; font-weight: 700; margin-bottom: var(--space-2); }
+        .drop-sub   { font-size: .84rem; color: var(--text-muted); }
+        .drop-sub strong { color: var(--accent); cursor: pointer; }
+        .drop-sub strong:hover { text-decoration: underline; }
+
+        /* ── File chip ── */
+        .file-chip {
+            display: inline-flex; align-items: center; gap: var(--space-3);
+            background: var(--success-soft); border: 1px solid rgba(52,201,143,.25);
+            border-radius: var(--radius-lg); padding: var(--space-3) var(--space-4); margin-top: var(--space-4);
+        }
+        .file-chip i { color: var(--success); font-size: 1.2rem; }
+        .file-chip span { font-weight: 600; font-size: .85rem; }
+        .file-chip small { color: var(--text-muted); font-size: .75rem; }
+        .file-chip button { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 2px; border-radius: var(--radius-sm); transition: all var(--t-fast); }
+        .file-chip button:hover { background: var(--danger-soft); color: var(--danger); }
+
+        /* ── Steps ── */
+        .steps { display: flex; align-items: center; gap: 0; margin-bottom: var(--space-8); }
+        .step  { display: flex; align-items: center; gap: var(--space-3); flex: 1; }
+        .step-num {
+            width: 32px; height: 32px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-family: var(--font-display); font-weight: 800; font-size: .85rem;
+            background: var(--bg-elevated); border: 2px solid var(--border); color: var(--text-muted);
+            flex-shrink: 0; transition: all var(--t-base);
+        }
+        .step.active .step-num { background: var(--accent); border-color: var(--accent); color: white; }
+        .step.done   .step-num { background: var(--success); border-color: var(--success); color: white; }
+        .step-info   { flex: 1; min-width: 0; }
+        .step-label  { font-size: .78rem; font-weight: 700; color: var(--text-muted); }
+        .step.active .step-label { color: var(--accent); }
+        .step.done   .step-label { color: var(--success); }
+        .step-desc   { font-size: .7rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .step-line   { flex-shrink: 0; width: 40px; height: 2px; background: var(--border); margin: 0 var(--space-2); }
+        .step-line.done { background: var(--success); }
+
+        /* ── Preview table ── */
+        .preview-wrap { overflow-x: auto; border-radius: var(--radius-lg); border: 1px solid var(--border); max-height: 420px; overflow-y: auto; }
+        .preview-table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+        .preview-table thead th {
+            position: sticky; top: 0; background: var(--bg-elevated);
+            padding: var(--space-3) var(--space-4); text-align: left;
+            font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em;
+            color: var(--text-muted); border-bottom: 1px solid var(--border); white-space: nowrap;
+            font-family: var(--font-display);
+        }
+        .preview-table tbody td { padding: var(--space-2) var(--space-4); border-bottom: 1px solid var(--border); color: var(--text-secondary); vertical-align: middle; }
+        .preview-table tbody tr:hover td { background: var(--bg-hover); }
+        .preview-table tbody tr.row-error td { background: rgba(240,94,94,.06); }
+        .preview-table tbody tr.row-skip  td { opacity: .6; }
+        .row-num { width: 36px; text-align: center; font-family: var(--font-display); font-weight: 700; font-size: .72rem; color: var(--text-muted); }
+        .row-status { display: inline-flex; align-items: center; gap: 4px; font-size: .7rem; font-weight: 700; padding: 2px 8px; border-radius: var(--radius-full); }
+        .row-status.ok    { background: var(--success-soft); color: var(--success); }
+        .row-status.error { background: var(--danger-soft);  color: var(--danger); }
+        .row-status.skip  { background: var(--bg-elevated);  color: var(--text-muted); }
+
+        /* ── Summary bar ── */
+        .import-summary { display: flex; gap: var(--space-4); align-items: stretch; padding: var(--space-4) var(--space-5); background: var(--bg-elevated); border-radius: var(--radius-lg); border: 1px solid var(--border); margin-bottom: var(--space-5); flex-wrap: wrap; }
+        .summary-item { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: var(--space-2) var(--space-4); border-radius: var(--radius-md); }
+        .summary-item .val { font-family: var(--font-display); font-size: 1.4rem; font-weight: 800; }
+        .summary-item .lbl { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--text-muted); }
+        .si-total { background: var(--accent-soft);  } .si-total .val { color: var(--accent); }
+        .si-ok    { background: var(--success-soft); } .si-ok    .val { color: var(--success); }
+        .si-error { background: var(--danger-soft);  } .si-error .val { color: var(--danger); }
+        .si-skip  { background: var(--bg-hover);     } .si-skip  .val { color: var(--text-muted); }
+
+        /* ── Progress bar ── */
+        .progress-bar-wrap { background: var(--bg-elevated); border-radius: var(--radius-full); height: 8px; overflow: hidden; margin-bottom: var(--space-3); }
+        .progress-bar-fill { height: 100%; border-radius: var(--radius-full); background: linear-gradient(90deg, var(--accent), var(--success)); transition: width .4s var(--ease-out); }
+        .progress-label { font-size: .78rem; color: var(--text-muted); text-align: center; }
+
+        /* ── Result log ── */
+        .result-log { max-height: 240px; overflow-y: auto; background: var(--bg-elevated); border-radius: var(--radius-lg); border: 1px solid var(--border); padding: var(--space-3); font-size: .78rem; }
+        .log-line { padding: 3px var(--space-2); border-radius: 4px; display: flex; gap: var(--space-2); align-items: flex-start; }
+        .log-line.ok   { color: var(--success); }
+        .log-line.err  { color: var(--danger); background: var(--danger-soft); }
+        .log-line.info { color: var(--text-muted); }
+        .log-num { flex-shrink: 0; width: 28px; text-align: right; opacity: .5; }
+
+        /* ── Column mapping ── */
+        .mapping-grid { display: grid; grid-template-columns: 1fr auto 1fr; gap: var(--space-3); align-items: center; }
+        .mapping-arrow { color: var(--accent); font-size: 1rem; text-align: center; }
+
+        @media (max-width: 768px) {
+            .steps { flex-wrap: wrap; gap: var(--space-3); }
+            .step-line { display: none; }
+            .import-summary { justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <div class="logo"><div class="logo-mark"><span>F3</span></div><div class="logo-text"><strong>MyF3School</strong><small>Admin Portal</small></div></div>
+        <button class="sidebar-toggle" id="sidebarToggle"><i class="bi bi-layout-sidebar-reverse"></i></button>
+    </div>
+    <nav class="sidebar-nav">
+        <div class="nav-group"><span class="nav-label">Tổng quan</span><a href="/admin/dashboard" class="nav-item"><i class="bi bi-grid-1x2"></i><span>Dashboard</span></a></div>
+        <div class="nav-group"><span class="nav-label">Học tập</span>
+            <a href="/admin/courses"    class="nav-item"><i class="bi bi-journal-bookmark"></i><span>Môn học &amp; Lớp</span></a>
+            <a href="/admin/grades"     class="nav-item active"><i class="bi bi-bar-chart-steps"></i><span>Điểm số</span></a>
+            <a href="/admin/attendance" class="nav-item"><i class="bi bi-person-check"></i><span>Điểm danh</span></a></div>
+        <div class="nav-group"><span class="nav-label">Quản lý</span>
+            <a href="/admin/accounts"     class="nav-item"><i class="bi bi-people"></i><span>Tài khoản</span></a>
+            <a href="/admin/applications" class="nav-item"><i class="bi bi-file-earmark-text"></i><span>Đơn từ</span></a>
+            <a href="/admin/clubs"        class="nav-item"><i class="bi bi-collection"></i><span>Câu lạc bộ</span></a></div>
+        <div class="nav-group"><span class="nav-label">Hệ thống</span>
+            <a href="/admin/notifications" class="nav-item"><i class="bi bi-bell"></i><span>Thông báo</span></a>
+            <a href="/admin/settings"      class="nav-item"><i class="bi bi-sliders"></i><span>Cài đặt</span></a></div>
+    </nav>
+    <div class="sidebar-footer">
+        <div class="user-chip"><div class="user-avatar">A</div>
+            <div class="user-info"><span class="user-name">Admin</span><span class="user-role">Administrator</span></div></div>
+        <a href="/auth/logout" class="logout-btn"><i class="bi bi-box-arrow-right"></i></a>
+    </div>
+</aside>
+
+<div class="main-wrapper" id="mainWrapper">
+    <header class="topbar">
+        <div class="topbar-left">
+            <button class="topbar-btn topbar-toggle-mobile" id="mobileSidebarToggle"><i class="bi bi-list"></i></button>
+            <div class="breadcrumb-trail">
+                <a href="/admin/grades" style="color:var(--text-muted)">Điểm số</a>
+                <span style="margin:0 6px;color:var(--text-muted)">/</span>
+                Import Excel
+            </div>
+        </div>
+        <div class="topbar-right">
+            <div class="live-clock" id="liveClock"></div>
+            <div class="rt-indicator" id="rtIndicator"><span class="rt-dot"></span><span class="rt-label">Live</span></div>
+            <button class="topbar-btn notif-btn" id="topbarNotifBtn"><i class="bi bi-bell"></i><span class="notif-count" id="topbarNotifCount" style="display:none">0</span></button>
+            <div class="notif-dropdown" id="notifDropdown">
+                <div class="notif-header"><span>Thông báo</span><button class="mark-all-read" id="markAllReadBtn">Đọc tất cả</button></div>
+                <div class="notif-list" id="notifList"><div class="notif-empty">Không có thông báo mới</div></div>
+            </div>
+            <button class="topbar-btn" id="themeToggle"><i class="bi bi-moon-stars"></i></button>
+        </div>
+    </header>
+
+    <main class="page-content">
+        <div class="page-header">
+            <div><h1 class="page-title">Import Điểm từ Excel</h1><p class="page-subtitle">Tải lên file .xlsx để cập nhật điểm hàng loạt</p></div>
+            <div class="page-actions">
+                <button class="btn btn-secondary" onclick="generateTestFile()"><i class="bi bi-file-earmark-spreadsheet"></i> Tạo file test</button>
+                <a href="/static/grade_import_template.xlsx" download class="btn btn-secondary"><i class="bi bi-file-earmark-arrow-down"></i> Tải template mẫu</a>
+                <a href="/admin/grades" class="btn btn-ghost"><i class="bi bi-arrow-left"></i> Quay lại</a>
+            </div>
+        </div>
+
+        <!-- Steps -->
+        <div class="steps" id="stepsBar">
+            <div class="step active" id="step1"><div class="step-num" id="sn1">1</div><div class="step-info"><div class="step-label">Chọn file</div><div class="step-desc">Upload .xlsx</div></div></div>
+            <div class="step-line" id="sl1"></div>
+            <div class="step" id="step2"><div class="step-num" id="sn2">2</div><div class="step-info"><div class="step-label">Kiểm tra dữ liệu</div><div class="step-desc">Preview & validate</div></div></div>
+            <div class="step-line" id="sl2"></div>
+            <div class="step" id="step3"><div class="step-num" id="sn3">3</div><div class="step-info"><div class="step-label">Xác nhận import</div><div class="step-desc">Gửi lên server</div></div></div>
+            <div class="step-line" id="sl3"></div>
+            <div class="step" id="step4"><div class="step-num" id="sn4">4</div><div class="step-info"><div class="step-label">Hoàn tất</div><div class="step-desc">Kết quả</div></div></div>
+        </div>
+
+        <!-- PANEL 1: Upload -->
+        <div id="panel1">
+            <div class="card">
+                <div class="card-header"><div class="card-title"><i class="bi bi-upload"></i> Tải lên file Excel</div></div>
+                <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+                    <div class="drop-icon"><i class="bi bi-file-earmark-spreadsheet"></i></div>
+                    <div class="drop-title">Kéo thả file vào đây</div>
+                    <div class="drop-sub">hoặc <strong onclick="event.stopPropagation();document.getElementById('fileInput').click()">chọn từ máy tính</strong></div>
+                    <div class="drop-sub" style="margin-top:var(--space-2)">Hỗ trợ: <code style="background:var(--bg-hover);padding:1px 6px;border-radius:4px">.xlsx</code> &nbsp;·&nbsp; Tối đa 5MB &nbsp;·&nbsp; 1000 hàng</div>
+                    <div id="fileChip"></div>
+                </div>
+                <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none"/>
+                <div id="mappingSection" style="display:none;margin-top:var(--space-5)">
+                    <div style="display:flex;align-items:center;gap:var(--space-3);margin-bottom:var(--space-4)">
+                        <div class="card-title" style="font-size:.85rem"><i class="bi bi-diagram-2"></i> Cấu hình cột</div>
+                        <span class="chip chip-info">Tự động phát hiện</span>
+                    </div>
+                    <div id="mappingGrid" class="mapping-grid"></div>
+                </div>
+                <div style="display:flex;gap:var(--space-3);margin-top:var(--space-5)">
+                    <button class="btn btn-primary" id="parseBtn" onclick="parseFile()" style="display:none"><i class="bi bi-search"></i> Kiểm tra dữ liệu</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- PANEL 2: Preview -->
+        <div id="panel2" style="display:none">
+            <div class="card">
+                <div class="card-header">
+                    <div><div class="card-title"><i class="bi bi-table"></i> Xem trước dữ liệu</div><div class="card-subtitle" id="previewSubtitle"></div></div>
+                    <div class="card-actions">
+                        <button class="btn btn-ghost btn-sm" onclick="resetAll()"><i class="bi bi-arrow-left"></i> Chọn lại</button>
+                        <button class="btn btn-secondary btn-sm" id="toggleErrorsBtn" onclick="toggleErrors()"><i class="bi bi-funnel"></i> Chỉ lỗi</button>
+                        <button class="btn btn-primary" id="confirmBtn" onclick="startImport()"><i class="bi bi-cloud-upload"></i> Xác nhận import</button>
+                    </div>
+                </div>
+                <div class="import-summary" id="summaryBar"></div>
+                <div class="preview-wrap"><table class="preview-table"><thead id="previewHead"></thead><tbody id="previewBody"></tbody></table></div>
+                <div id="errorDetail" style="display:none;margin-top:var(--space-4)">
+                    <div style="display:flex;align-items:center;gap:var(--space-2);margin-bottom:var(--space-3)"><i class="bi bi-exclamation-triangle" style="color:var(--warn)"></i><span style="font-size:.82rem;font-weight:600;color:var(--warn)">Danh sách lỗi cần xử lý</span></div>
+                    <div id="errorList" class="result-log"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PANEL 3: Importing -->
+        <div id="panel3" style="display:none">
+            <div class="card">
+                <div class="card-header"><div class="card-title"><i class="bi bi-cloud-upload"></i> Đang import...</div></div>
+                <div style="max-width:560px;margin:0 auto;padding:var(--space-8) 0">
+                    <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progressFill" style="width:0%"></div></div>
+                    <div class="progress-label" id="progressLabel">Đang chuẩn bị...</div>
+                    <div class="result-log" id="importLog" style="margin-top:var(--space-5)"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PANEL 4: Done -->
+        <div id="panel4" style="display:none">
+            <div class="card" style="text-align:center">
+                <div style="padding:var(--space-10) var(--space-6)">
+                    <div id="doneIcon" style="width:72px;height:72px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto var(--space-5);font-size:2rem"></div>
+                    <h2 class="page-title" id="doneTitle" style="font-size:1.4rem;margin-bottom:var(--space-3)"></h2>
+                    <p class="page-subtitle" id="doneDesc" style="margin-bottom:var(--space-6)"></p>
+                    <div id="doneSummary" class="import-summary" style="justify-content:center;margin-bottom:var(--space-6)"></div>
+                    <div style="display:flex;gap:var(--space-3);justify-content:center">
+                        <button class="btn btn-secondary" onclick="resetAll()"><i class="bi bi-arrow-clockwise"></i> Import thêm</button>
+                        <a href="/admin/grades" class="btn btn-primary"><i class="bi bi-arrow-right"></i> Về trang Điểm số</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+    window.F3_USER_ID  = /*[[${userId}]]*/ 1;
+    window.F3_API_BASE = /*[[${apiBase}]]*/ '/api';
+</script>
+<script src="/static/js/theme.js"></script>
+<script src="/static/js/realtime.js"></script>
+<script src="/static/js/layout.js"></script>
+<!-- BUG FIX: F3Api phải được load trước khi script import chạy -->
+<script src="/static/js/F3Api.js"></script>
+<script>
+    'use strict';
+
+    // BUG FIX: Guard phòng trường hợp F3Api hoặc F3Toast chưa được load
+    if (typeof F3Api === 'undefined') {
+        console.error('❌ F3Api chưa được load! Kiểm tra <script src="/static/js/F3Api.js">');
+        alert('Lỗi cấu hình: F3Api.js chưa được tải. Vui lòng liên hệ admin.');
+    }
+    // Fallback F3Toast nếu layout.js chưa define
+    if (typeof F3Toast === 'undefined') {
+        window.F3Toast = {
+            success: (t, m) => console.log('✅', t, m),
+            danger:  (t, m) => { console.error('❌', t, m); alert(`❌ ${t}: ${m}`); },
+            warn:    (t, m) => { console.warn('⚠️', t, m); alert(`⚠️ ${t}: ${m||''}`); },
+        };
+    }
+
+    let parsedRows     = [];
+    let validRows      = [];
+    let colMap         = {};
+    let fileName       = '';
+    let showOnlyErrors = false;
+
+    const REQUIRED_FIELDS = ['componentId', 'studentProfileId', 'score'];
+    const ALL_FIELDS = ['componentId', 'studentProfileId', 'score', 'notes', 'subjectCode', 'subjectName', 'studentName', 'maxScore'];
+
+    // ── Drop zone ─────────────────────────────────────────────
+    const dropZone  = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+
+    dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+    dropZone.addEventListener('drop', e => {
+        e.preventDefault(); dropZone.classList.remove('drag-over');
+        const f = e.dataTransfer.files[0]; if (f) handleFile(f);
+    });
+    fileInput.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+
+    function handleFile(file) {
+        if (!file.name.match(/\.(xlsx|xls)$/i)) { F3Toast.danger('File không hợp lệ', 'Chỉ chấp nhận .xlsx hoặc .xls'); return; }
+        if (file.size > 5 * 1024 * 1024)        { F3Toast.danger('File quá lớn', 'Tối đa 5MB'); return; }
+        fileName = file.name;
+        document.getElementById('fileChip').innerHTML = `
+            <div class="file-chip">
+                <i class="bi bi-file-earmark-spreadsheet-fill"></i>
+                <div><span>${escHtml(file.name)}</span><br><small>${(file.size/1024).toFixed(1)} KB</small></div>
+                <button onclick="clearFile(event)"><i class="bi bi-x"></i></button>
+            </div>`;
+        readExcel(file);
+    }
+
+    function clearFile(e) {
+        e.stopPropagation();
+        fileInput.value = '';
+        document.getElementById('fileChip').innerHTML = '';
+        document.getElementById('parseBtn').style.display = 'none';
+        document.getElementById('mappingSection').style.display = 'none';
+        parsedRows = []; colMap = {};
+    }
+
+    function readExcel(file) {
+        const reader = new FileReader();
+        reader.onload = e => {
+            try {
+                const wb   = XLSX.read(e.target.result, { type: 'array', cellDates: true });
+                const sheetName = wb.SheetNames.includes('NHẬP ĐIỂM') ? 'NHẬP ĐIỂM' : wb.SheetNames[0];
+                const ws   = wb.Sheets[sheetName];
+                const raw  = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+                let headerRow = -1;
+                for (let i = 0; i < Math.min(raw.length, 6); i++) {
+                    const rs = raw[i].join(' ').toLowerCase();
+                    if (rs.includes('componentid') || rs.includes('id đầu điểm')) { headerRow = i; break; }
+                }
+                if (headerRow === -1) { F3Toast.warn('Không tìm thấy tiêu đề', 'File phải có hàng tiêu đề với cột componentId'); return; }
+
+                const headers = raw[headerRow];
+                colMap = autoDetectColumns(headers);
+                showMapping(headers);
+
+                parsedRows = [];
+                for (let i = headerRow + 1; i < raw.length; i++) {
+                    const row = raw[i];
+                    if (row.every(c => c === '' || c === null || c === undefined)) continue;
+                    if (parsedRows.length >= 1000) break;
+                    const obj = { _row: i + 1, _raw: row };
+                    ALL_FIELDS.forEach(f => { const idx = colMap[f]; obj[f] = idx !== undefined ? (row[idx] ?? '') : ''; });
+                    parsedRows.push(obj);
+                }
+                document.getElementById('parseBtn').style.display = '';
+                F3Toast.success('Đọc file thành công', `${parsedRows.length} hàng · Sheet: ${sheetName}`);
+            } catch (err) { F3Toast.danger('Lỗi đọc file', err.message); }
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    function autoDetectColumns(headers) {
+        const map = {};
+        const matchers = {
+            componentId:      [/componentid/i, /id.*đầu.*điểm/i],
+            studentProfileId: [/studentprofileid/i, /id.*học.*sinh/i, /mã.*hs/i],
+            score:            [/^score$/i, /^điểm$/i],
+            notes:            [/^notes$/i, /^ghi.*chú$/i],
+            subjectCode:      [/subjectcode/i, /mã.*môn/i],
+            subjectName:      [/subjectname/i, /tên.*môn/i],
+            studentName:      [/studentname/i, /họ.*tên/i],
+            maxScore:         [/maxscore/i, /điểm.*tối.*đa/i],
+        };
+        headers.forEach((h, idx) => {
+            const hs = String(h).trim();
+            for (const [field, patterns] of Object.entries(matchers)) {
+                if (map[field] !== undefined) continue;
+                if (patterns.some(p => p.test(hs))) { map[field] = idx; }
+            }
+        });
+        return map;
+    }
+
+    function showMapping(headers) {
+        document.getElementById('mappingSection').style.display = '';
+        const grid = document.getElementById('mappingGrid');
+        const fields = ['componentId', 'studentProfileId', 'score', 'notes'];
+        const fieldLabels = { componentId:'ID Đầu điểm *', studentProfileId:'ID Học sinh *', score:'Điểm *', notes:'Ghi chú' };
+        grid.innerHTML = fields.map(f => {
+            const detected = colMap[f] !== undefined
+                ? `<span class="chip chip-success" style="font-size:.7rem">${escHtml(headers[colMap[f]])} (cột ${colMap[f]+1})</span>`
+                : `<span class="chip chip-danger" style="font-size:.7rem">Không tìm thấy</span>`;
+            const options = headers.map((h, i) => `<option value="${i}" ${colMap[f]===i?'selected':''}>${escHtml(h)} (cột ${i+1})</option>`).join('');
+            return `
+                <div style="font-size:.82rem;font-weight:600;color:var(--text-secondary)">${fieldLabels[f]}</div>
+                <div class="mapping-arrow"><i class="bi bi-arrow-right"></i></div>
+                <div>
+                    <select class="form-control" style="font-size:.78rem" onchange="updateMapping('${f}',this.value)">
+                        <option value="">-- Không map --</option>${options}
+                    </select>
+                    <div style="margin-top:4px">${detected}</div>
+                </div>`;
+        }).join('');
+    }
+
+    function updateMapping(field, val) { if (val === '') delete colMap[field]; else colMap[field] = parseInt(val); }
+
+    function parseFile() {
+        if (!parsedRows.length) { F3Toast.warn('Chưa có dữ liệu'); return; }
+        parsedRows.forEach(row => {
+            row._errors = [];
+            const cid = parseInt(row.componentId);
+            if (!row.componentId && row.componentId !== 0) row._errors.push('componentId trống');
+            else if (isNaN(cid) || cid <= 0) row._errors.push(`componentId không hợp lệ: "${row.componentId}"`);
+            const sid = parseInt(row.studentProfileId);
+            if (!row.studentProfileId && row.studentProfileId !== 0) row._errors.push('studentProfileId trống');
+            else if (isNaN(sid) || sid <= 0) row._errors.push(`studentProfileId không hợp lệ`);
+            if (row.score === '' || row.score === null || row.score === undefined) {
+                row._status = 'skip';
+            } else {
+                const sc = parseFloat(row.score);
+                if (isNaN(sc)) row._errors.push(`Điểm không phải số: "${row.score}"`);
+                else if (sc < 0) row._errors.push('Điểm không thể âm');
+                else if (row.maxScore && parseFloat(row.maxScore) > 0 && sc > parseFloat(row.maxScore)) row._errors.push(`Điểm ${sc} vượt quá tối đa ${row.maxScore}`);
+            }
+            if (!row._status) row._status = row._errors.length ? 'error' : 'ok';
+        });
+
+        validRows = parsedRows.filter(r => r._status === 'ok');
+        const errRows  = parsedRows.filter(r => r._status === 'error');
+        const skipRows = parsedRows.filter(r => r._status === 'skip');
+
+        setStep(2);
+        document.getElementById('panel1').style.display = 'none';
+        document.getElementById('panel2').style.display = '';
+        document.getElementById('previewSubtitle').textContent = `${fileName} · ${parsedRows.length} hàng`;
+
+        document.getElementById('summaryBar').innerHTML = `
+            <div class="summary-item si-total"><div class="val">${parsedRows.length}</div><div class="lbl">Tổng hàng</div></div>
+            <div class="summary-item si-ok"   ><div class="val">${validRows.length}</div><div class="lbl">Sẽ import</div></div>
+            <div class="summary-item si-error"><div class="val">${errRows.length}</div><div class="lbl">Có lỗi</div></div>
+            <div class="summary-item si-skip" ><div class="val">${skipRows.length}</div><div class="lbl">Bỏ qua (trống)</div></div>`;
+
+        const detail = document.getElementById('errorDetail');
+        if (errRows.length) {
+            detail.style.display = '';
+            document.getElementById('errorList').innerHTML = errRows.map(r =>
+                `<div class="log-line err"><span class="log-num">R${r._row}</span><span>${escHtml(r._errors.join(' · '))}</span></div>`
+            ).join('');
+        } else { detail.style.display = 'none'; }
+
+        renderPreviewTable(parsedRows);
+        document.getElementById('confirmBtn').disabled = validRows.length === 0;
+    }
+
+    function renderPreviewTable(rows) {
+        const display = showOnlyErrors ? rows.filter(r => r._status === 'error') : rows;
+        document.getElementById('previewHead').innerHTML = `<tr>
+            <th class="row-num">#</th><th>componentId</th><th>studentProfileId</th>
+            <th>Điểm</th><th>maxScore</th><th>Ghi chú</th><th>Trạng thái</th></tr>`;
+        if (!display.length) {
+            document.getElementById('previewBody').innerHTML = `<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted)">${showOnlyErrors?'Không có hàng lỗi 🎉':'Không có dữ liệu'}</td></tr>`;
+            return;
+        }
+        document.getElementById('previewBody').innerHTML = display.map(r => {
+            const statusHtml = {
+                ok:    `<span class="row-status ok"><i class="bi bi-check"></i> Hợp lệ</span>`,
+                error: `<span class="row-status error"><i class="bi bi-x"></i> ${escHtml(r._errors[0]||'Lỗi')}</span>`,
+                skip:  `<span class="row-status skip"><i class="bi bi-dash"></i> Bỏ qua</span>`,
+            }[r._status] || '';
+            const scOk = r._status === 'ok' && r.score !== '';
+            return `<tr class="row-${r._status}">
+                <td class="row-num">${r._row}</td>
+                <td style="font-weight:600">${escHtml(String(r.componentId))}</td>
+                <td style="font-weight:600">${escHtml(String(r.studentProfileId))}</td>
+                <td style="color:${scOk?'var(--success)':''};font-weight:${scOk?700:400}">${r.score !== '' ? escHtml(String(r.score)) : '<span style="color:var(--text-muted);font-style:italic">—</span>'}</td>
+                <td style="color:var(--text-muted)">${escHtml(String(r.maxScore||''))}</td>
+                <td style="color:var(--text-muted)">${escHtml(String(r.notes||''))}</td>
+                <td>${statusHtml}</td>
+            </tr>`;
+        }).join('');
+    }
+
+    function toggleErrors() {
+        showOnlyErrors = !showOnlyErrors;
+        document.getElementById('toggleErrorsBtn').innerHTML = showOnlyErrors
+            ? '<i class="bi bi-funnel-fill"></i> Tất cả'
+            : '<i class="bi bi-funnel"></i> Chỉ lỗi';
+        renderPreviewTable(parsedRows);
+    }
+
+    async function startImport() {
+        if (!validRows.length) { F3Toast.warn('Không có hàng hợp lệ'); return; }
+        setStep(3);
+        document.getElementById('panel2').style.display = 'none';
+        document.getElementById('panel3').style.display = '';
+
+        const log      = document.getElementById('importLog');
+        const progFill = document.getElementById('progressFill');
+        const progLbl  = document.getElementById('progressLabel');
+        const addLog   = (type, msg) => {
+            const el = document.createElement('div');
+            el.className = `log-line ${type}`;
+            el.innerHTML = `<span>${escHtml(msg)}</span>`;
+            log.appendChild(el);
+            log.scrollTop = log.scrollHeight;
+        };
+
+        const byComponent = {};
+        validRows.forEach(r => {
+            const cid = parseInt(r.componentId);
+            if (!byComponent[cid]) byComponent[cid] = {};
+            byComponent[cid][parseInt(r.studentProfileId)] = parseFloat(r.score);
+        });
+
+        const components = Object.keys(byComponent);
+        let successCount = 0, errorCount = 0;
+        addLog('info', `Bắt đầu import ${validRows.length} điểm · ${components.length} đầu điểm`);
+
+        for (let i = 0; i < components.length; i++) {
+            const componentId   = components[i];
+            const studentScores = byComponent[componentId];
+            const count         = Object.keys(studentScores).length;
+            progLbl.textContent  = `Đầu điểm ${i+1}/${components.length} (ID: ${componentId})...`;
+            progFill.style.width = `${Math.round((i / components.length) * 90)}%`;
+            try {
+                await F3Api.put(`/grades/components/${componentId}/bulk`, { studentScores });
+                successCount += count;
+                addLog('ok', `✓ componentId ${componentId}: ${count} học sinh`);
+            } catch (e) {
+                errorCount += count;
+                addLog('err', `✗ componentId ${componentId}: ${e.message}`);
+            }
+            await sleep(120);
+        }
+
+        progFill.style.width = '100%';
+        progLbl.textContent  = 'Hoàn tất!';
+        addLog('info', `─── Tổng kết: ${successCount} thành công · ${errorCount} lỗi ───`);
+        await sleep(600);
+        showDone(successCount, errorCount);
+    }
+
+    function showDone(ok, err) {
+        setStep(4);
+        document.getElementById('panel3').style.display = 'none';
+        document.getElementById('panel4').style.display = '';
+        const icon  = document.getElementById('doneIcon');
+        const title = document.getElementById('doneTitle');
+        const desc  = document.getElementById('doneDesc');
+        const sum   = document.getElementById('doneSummary');
+        if (err === 0) {
+            icon.style.cssText = 'background:var(--success-soft);color:var(--success);width:72px;height:72px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto var(--space-5);font-size:2rem';
+            icon.innerHTML = '<i class="bi bi-check-circle-fill"></i>';
+            title.textContent = 'Import hoàn tất!'; desc.textContent = `Đã cập nhật ${ok} điểm thành công.`;
+            F3Toast.success('Hoàn tất', `${ok} điểm đã được cập nhật`);
+        } else if (ok === 0) {
+            icon.style.cssText = 'background:var(--danger-soft);color:var(--danger);width:72px;height:72px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto var(--space-5);font-size:2rem';
+            icon.innerHTML = '<i class="bi bi-x-circle-fill"></i>';
+            title.textContent = 'Import thất bại'; desc.textContent = 'Tất cả đầu điểm đều gặp lỗi. Kiểm tra log bên trên.';
+            F3Toast.danger('Lỗi', 'Import thất bại toàn bộ');
+        } else {
+            icon.style.cssText = 'background:var(--warn-soft);color:var(--warn);width:72px;height:72px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto var(--space-5);font-size:2rem';
+            icon.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i>';
+            title.textContent = 'Import hoàn tất (có lỗi)'; desc.textContent = 'Một số đầu điểm không thể cập nhật.';
+            F3Toast.warn('Một phần thành công', `${ok} thành công · ${err} lỗi`);
+        }
+        sum.innerHTML = `
+            <div class="summary-item si-ok"    style="min-width:120px"><div class="val">${ok}</div><div class="lbl">Thành công</div></div>
+            <div class="summary-item si-error" style="min-width:120px"><div class="val">${err}</div><div class="lbl">Lỗi</div></div>`;
+    }
+
+    function setStep(n) {
+        for (let i = 1; i <= 4; i++) {
+            const s  = document.getElementById(`step${i}`);
+            const sn = document.getElementById(`sn${i}`);
+            if (i < n)       { s.classList.remove('active'); s.classList.add('done'); sn.innerHTML = '<i class="bi bi-check" style="font-size:.7rem"></i>'; document.getElementById(`sl${i}`)?.classList.add('done'); }
+            else if (i === n){ s.classList.add('active'); s.classList.remove('done'); }
+            else             { s.classList.remove('active','done'); sn.textContent = i; }
+        }
+    }
+
+    function resetAll() {
+        parsedRows = []; validRows = []; colMap = {}; showOnlyErrors = false;
+        fileInput.value = '';
+        document.getElementById('fileChip').innerHTML  = '';
+        document.getElementById('parseBtn').style.display = 'none';
+        document.getElementById('mappingSection').style.display = 'none';
+        ['panel1','panel2','panel3','panel4'].forEach((p, i) => { document.getElementById(p).style.display = i === 0 ? '' : 'none'; });
+        for (let i = 1; i <= 4; i++) {
+            const s = document.getElementById(`step${i}`); const sn = document.getElementById(`sn${i}`);
+            s.classList.remove('active','done'); sn.innerHTML = String(i);
+            document.getElementById(`sl${i}`)?.classList.remove('done');
+        }
+        document.getElementById('step1').classList.add('active');
+        document.getElementById('importLog').innerHTML  = '';
+        document.getElementById('progressFill').style.width = '0%';
+    }
+
+    function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+    // ── Tạo file test (generate XLSX trực tiếp ở browser) ───────────────
+    function generateTestFile() {
+        // ── Dữ liệu mẫu khớp với seed.sql ──────────────────────────────
+        const HEADER = [
+            "componentId","studentProfileId","score","maxScore",
+            "subjectCode","subjectName","studentName","notes"
+        ];
+
+        // (cid, sid, score, max, code, subjectName, studentName, notes)
+        const DATA = [
+            // Toán – KT thường xuyên (component 1)
+            [1,1, 8.5,10,"MATH","Toán học","Phạm Thị Dung",""],
+            [1,2, 7.0,10,"MATH","Toán học","Hoàng Văn Em",""],
+            [1,3, 9.5,10,"MATH","Toán học","Vũ Thị Phương","Sửa từ 9.0"],
+            [1,4, 6.5,10,"MATH","Toán học","Đặng Văn Giang",""],
+            [1,5, 7.8,10,"MATH","Toán học","Bùi Thị Hoa",""],
+            // Toán – Giữa kỳ (component 2)
+            [2,1, 7.0,10,"MATH","Toán học","Phạm Thị Dung",""],
+            [2,2, 7.5,10,"MATH","Toán học","Hoàng Văn Em",""],
+            [2,3, 9.0,10,"MATH","Toán học","Vũ Thị Phương",""],
+            [2,4, 5.5,10,"MATH","Toán học","Đặng Văn Giang",""],
+            [2,5, 8.0,10,"MATH","Toán học","Bùi Thị Hoa",""],
+            // Toán – Cuối kỳ (component 3)
+            [3,1, 8.3,10,"MATH","Toán học","Phạm Thị Dung",""],
+            [3,2, 7.0,10,"MATH","Toán học","Hoàng Văn Em",""],
+            [3,3, 9.5,10,"MATH","Toán học","Vũ Thị Phương",""],
+            [3,4, 6.0,10,"MATH","Toán học","Đặng Văn Giang",""],
+            [3,5, 7.5,10,"MATH","Toán học","Bùi Thị Hoa",""],
+            // Tiếng Anh – KT thường xuyên (component 7)
+            [7,1, 9.0,10,"ENG","Tiếng Anh","Phạm Thị Dung",""],
+            [7,2, 8.0,10,"ENG","Tiếng Anh","Hoàng Văn Em",""],
+            [7,3,10.0,10,"ENG","Tiếng Anh","Vũ Thị Phương","Hoàn hảo"],
+            [7,4,  "",10,"ENG","Tiếng Anh","Đặng Văn Giang","Nghỉ có phép"],  // skip
+            [7,5, 6.5,10,"ENG","Tiếng Anh","Bùi Thị Hoa",""],
+            // Tiếng Anh – Bài tập lớn (component 8)
+            [8,1, 8.5,10,"ENG","Tiếng Anh","Phạm Thị Dung",""],
+            [8,2, 7.5,10,"ENG","Tiếng Anh","Hoàng Văn Em",""],
+            [8,3, 9.5,10,"ENG","Tiếng Anh","Vũ Thị Phương",""],
+            [8,4, 5.0,10,"ENG","Tiếng Anh","Đặng Văn Giang",""],
+            [8,5, 7.0,10,"ENG","Tiếng Anh","Bùi Thị Hoa",""],
+            // Tiếng Anh – Cuối kỳ (component 9) — có 2 dòng LỖI cố ý để test validator
+            [9,1,11.0,10,"ENG","Tiếng Anh","Phạm Thị Dung","[TEST] Điểm vượt max"],
+            [9,2,"abc",10,"ENG","Tiếng Anh","Hoàng Văn Em","[TEST] Không phải số"],
+            [9,3, 9.8,10,"ENG","Tiếng Anh","Vũ Thị Phương",""],
+            [ "",5, 7.0,10,"ENG","Tiếng Anh","Bùi Thị Hoa","[TEST] Thiếu componentId"],
+        ];
+
+        // ── Tạo workbook ──────────────────────────────────────────────
+        const wb = XLSX.utils.book_new();
+
+        // Sheet 1: NHẬP ĐIỂM
+        const ws1Data = [
+            // Row 1: tiêu đề (merge ở Excel không xử lý được qua utils, dùng như comment)
+            ["MyF3School — File nhập điểm (TEST DATA) — Học kỳ 2 – 2024-2025"],
+            [], // spacer
+            HEADER,
+            ...DATA
+        ];
+        const ws1 = XLSX.utils.aoa_to_sheet(ws1Data);
+
+        // Độ rộng cột
+        ws1['!cols'] = [
+            {wch:14},{wch:18},{wch:10},{wch:10},
+            {wch:12},{wch:18},{wch:22},{wch:36}
+        ];
+
+        // Đánh dấu vùng dữ liệu
+        const totalRows = ws1Data.length;
+        ws1['!ref'] = XLSX.utils.encode_range({s:{r:0,c:0}, e:{r:totalRows-1,c:HEADER.length-1}});
+
+        XLSX.utils.book_append_sheet(wb, ws1, "NHẬP ĐIỂM");
+
+        // Sheet 2: DỮ LIỆU THAM CHIẾU
+        const refData = [
+            ["=== DANH SÁCH ĐẦU ĐIỂM (grade_components) ==="],
+            ["componentId","courseSectionId","subjectCode","subjectName","className","gradeType","weight%"],
+            [1,1,"MATH","Toán học","10A1","ASSIGNMENT",30],
+            [2,1,"MATH","Toán học","10A1","MIDTERM",30],
+            [3,1,"MATH","Toán học","10A1","FINAL",40],
+            [4,2,"LIT","Ngữ văn","10A1","ASSIGNMENT",30],
+            [5,2,"LIT","Ngữ văn","10A1","MIDTERM",30],
+            [6,2,"LIT","Ngữ văn","10A1","FINAL",40],
+            [7,3,"ENG","Tiếng Anh","10A1","ASSIGNMENT",20],
+            [8,3,"ENG","Tiếng Anh","10A1","PROJECT",30],
+            [9,3,"ENG","Tiếng Anh","10A1","FINAL",50],
+            [10,4,"PHY","Vật lý","10A1","ASSIGNMENT",30],
+            [11,4,"PHY","Vật lý","10A1","MIDTERM",30],
+            [12,4,"PHY","Vật lý","10A1","FINAL",40],
+            [13,5,"CHE","Hóa học","10A1","ASSIGNMENT",30],
+            [14,5,"CHE","Hóa học","10A1","MIDTERM",30],
+            [15,5,"CHE","Hóa học","10A1","FINAL",40],
+            [],
+            ["=== DANH SÁCH HỌC SINH (student_profiles) ==="],
+            ["studentProfileId","studentCode","studentName","className"],
+            [1,"HS24001","Phạm Thị Dung","10A1"],
+            [2,"HS24002","Hoàng Văn Em","10A1"],
+            [3,"HS24003","Vũ Thị Phương","10A1"],
+            [4,"HS23001","Đặng Văn Giang","10A2"],
+            [5,"HS23002","Bùi Thị Hoa","10A2"],
+        ];
+        const ws2 = XLSX.utils.aoa_to_sheet(refData);
+        ws2['!cols'] = [{wch:18},{wch:16},{wch:18},{wch:14},{wch:8},{wch:14},{wch:10}];
+        XLSX.utils.book_append_sheet(wb, ws2, "DỮ LIỆU THAM CHIẾU");
+
+        // Sheet 3: HƯỚNG DẪN
+        const helpData = [
+            ["Hướng dẫn sử dụng file nhập điểm — MyF3School"],
+            [],
+            ["CỘT BẮT BUỘC","MÔ TẢ"],
+            ["componentId","ID đầu điểm từ bảng grade_components (số nguyên > 0)"],
+            ["studentProfileId","ID hồ sơ học sinh từ bảng student_profiles (số nguyên > 0)"],
+            ["score","Điểm số (0 – maxScore). Để trống → bỏ qua hàng, không báo lỗi"],
+            [],
+            ["CỘT TUỲ CHỌN",""],
+            ["maxScore","Điểm tối đa để validator so sánh; nếu thiếu bỏ qua kiểm tra ceiling"],
+            ["subjectCode / subjectName","Chỉ để tham chiếu, không import"],
+            ["studentName","Chỉ để tham chiếu, không import"],
+            ["notes","Ghi chú đính kèm điểm"],
+            [],
+            ["QUY TẮC",""],
+            ["Sheet đọc","Ưu tiên sheet tên 'NHẬP ĐIỂM'; nếu không có → dùng sheet đầu tiên"],
+            ["Header","Hàng tiêu đề phải nằm trong 6 hàng đầu, chứa chuỗi 'componentId'"],
+            ["Tối đa","1.000 hàng / file · 5 MB"],
+            [],
+            ["LỖI THƯỜNG GẶP",""],
+            ["Điểm > maxScore","Hàng bị đánh dấu lỗi, KHÔNG import"],
+            ["Điểm không phải số","Hàng bị đánh dấu lỗi, KHÔNG import"],
+            ["componentId trống","Hàng bị bỏ qua"],
+            [],
+            ["File test này có 3 dòng lỗi cố ý ở component 9 — dùng để test validator"],
+        ];
+        const ws3 = XLSX.utils.aoa_to_sheet(helpData);
+        ws3['!cols'] = [{wch:28},{wch:72}];
+        XLSX.utils.book_append_sheet(wb, ws3, "HƯỚNG DẪN");
+
+        // ── Download ──────────────────────────────────────────────────
+        const ts   = new Date().toISOString().slice(0,10).replace(/-/g,'');
+        const name = `grade_import_test_${ts}.xlsx`;
+        XLSX.writeFile(wb, name);
+
+        // Thông báo nhỏ
+        const badge = document.createElement('div');
+        badge.style.cssText =
+            'position:fixed;bottom:24px;right:24px;background:var(--success);color:#fff;' +
+            'padding:10px 18px;border-radius:8px;font-size:.85rem;font-weight:600;z-index:9999;' +
+            'box-shadow:0 4px 16px rgba(0,0,0,.25);display:flex;align-items:center;gap:8px;';
+        badge.innerHTML = `<i class="bi bi-check-circle-fill"></i> Đã tạo <strong>${name}</strong>`;
+        document.body.appendChild(badge);
+        setTimeout(() => badge.remove(), 3500);
+    }
+
+    function escHtml(str) {
+        return String(str ?? '')
+            .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+            .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+</script>
+</body>
+</html>

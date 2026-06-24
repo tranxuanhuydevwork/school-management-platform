@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+    <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Điểm Danh — MyF3School Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,400&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="/static/css/theme.css" />
+    <link rel="stylesheet" href="/static/css/layout.css" />
+    <link rel="stylesheet" href="/static/css/components.css" />
+
+    <style>
+        /* ── Page-specific overrides ─────────────────────────── */
+        .att-toolbar {
+            display: flex; gap: var(--space-3); align-items: flex-end;
+            flex-wrap: wrap; margin-bottom: var(--space-5);
+        }
+        .att-toolbar .form-group { margin-bottom: 0; }
+
+        /* Step indicator */
+        .steps {
+            display: flex; gap: 0; margin-bottom: var(--space-6);
+            background: var(--bg-elevated); border-radius: var(--radius-lg);
+            border: 1px solid var(--border); overflow: hidden;
+        }
+        .step {
+            flex: 1; display: flex; align-items: center; gap: var(--space-2);
+            padding: var(--space-3) var(--space-4); font-size: .8rem; font-weight: 600;
+            color: var(--text-muted); position: relative; transition: all var(--t-fast);
+            border-right: 1px solid var(--border);
+        }
+        .step:last-child { border-right: none; }
+        .step-num {
+            width: 22px; height: 22px; border-radius: 50%;
+            background: var(--bg-card); border: 2px solid var(--border);
+            display: flex; align-items: center; justify-content: center;
+            font-size: .7rem; font-weight: 800; flex-shrink: 0;
+            transition: all var(--t-fast);
+        }
+        .step.active { color: var(--accent); background: var(--accent-soft); }
+        .step.active .step-num { background: var(--accent); border-color: var(--accent); color: #fff; }
+        .step.done { color: var(--success); }
+        .step.done .step-num { background: var(--success); border-color: var(--success); color: #fff; }
+
+        /* Section cards for steps */
+        .step-panel { display: none; }
+        .step-panel.active { display: block; }
+
+        /* Attendance table */
+        .att-table { width: 100%; border-collapse: collapse; }
+        .att-table th, .att-table td {
+            padding: var(--space-3) var(--space-4); text-align: left;
+            border-bottom: 1px solid var(--border); font-size: .85rem;
+        }
+        .att-table th {
+            font-size: .72rem; font-weight: 700; letter-spacing: .04em;
+            text-transform: uppercase; color: var(--text-muted);
+            background: var(--bg-elevated); position: sticky; top: 0; z-index: 1;
+        }
+        .att-table tbody tr:hover { background: var(--bg-hover); }
+        .att-table tbody tr:last-child td { border-bottom: none; }
+
+        /* Status radio group */
+        .status-group {
+            display: flex; gap: 6px; flex-wrap: wrap;
+        }
+        .status-radio { display: none; }
+        .status-label {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 4px 10px; border-radius: 20px; font-size: .72rem;
+            font-weight: 700; cursor: pointer; border: 2px solid transparent;
+            transition: all var(--t-fast); user-select: none;
+        }
+        .status-radio:checked + .status-label { border-color: currentColor; }
+
+        .sl-present { background: var(--success-soft); color: var(--success); }
+        .status-radio:checked + .sl-present { background: var(--success); color: #fff; }
+
+        .sl-absent  { background: var(--danger-soft); color: var(--danger); }
+        .status-radio:checked + .sl-absent  { background: var(--danger);  color: #fff; }
+
+        .sl-late    { background: var(--warn-soft); color: var(--warn); }
+        .status-radio:checked + .sl-late    { background: var(--warn);    color: #fff; }
+
+        .sl-excused { background: var(--info-soft); color: var(--info); }
+        .status-radio:checked + .sl-excused { background: var(--info);    color: #fff; }
+
+        /* Note input inside table */
+        .note-input {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: var(--radius-sm); color: var(--text-primary);
+            padding: 4px 8px; font-size: .78rem; width: 100%; min-width: 120px;
+            font-family: var(--font-body);
+            transition: border-color var(--t-fast);
+        }
+        .note-input:focus { outline: none; border-color: var(--accent); }
+
+        /* Bulk actions bar */
+        .bulk-bar {
+            display: flex; gap: var(--space-2); align-items: center;
+            padding: var(--space-3) var(--space-4);
+            background: var(--bg-elevated); border: 1px solid var(--border);
+            border-radius: var(--radius-md); margin-bottom: var(--space-3);
+            flex-wrap: wrap;
+        }
+        .bulk-bar span { font-size: .8rem; color: var(--text-secondary); margin-right: auto; }
+
+        /* Summary badges */
+        .att-summary {
+            display: flex; gap: var(--space-3); flex-wrap: wrap;
+            padding: var(--space-3) var(--space-4);
+            background: var(--bg-elevated); border-radius: var(--radius-md);
+            border: 1px solid var(--border); margin-bottom: var(--space-4);
+        }
+        .att-sum-item { display: flex; align-items: center; gap: 6px; font-size: .8rem; font-weight: 600; }
+        .att-sum-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+        /* History table status chips */
+        .status-chip {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 2px 8px; border-radius: 12px; font-size: .72rem; font-weight: 700;
+        }
+        .sc-PRESENT  { background: var(--success-soft); color: var(--success); }
+        .sc-ABSENT   { background: var(--danger-soft);  color: var(--danger);  }
+        .sc-LATE     { background: var(--warn-soft);     color: var(--warn);    }
+        .sc-EXCUSED  { background: var(--info-soft);     color: var(--info);    }
+        .sc-NOT_YET  { background: var(--bg-card);       color: var(--text-muted); }
+
+        /* Empty / Loading states */
+        .panel-loading {
+            display: flex; align-items: center; justify-content: center;
+            gap: var(--space-2); padding: var(--space-8);
+            color: var(--text-muted); font-size: .85rem;
+        }
+
+        /* Lock banner */
+        .lock-banner {
+            display: flex; align-items: center; gap: var(--space-3);
+            padding: var(--space-4); border-radius: var(--radius-md);
+            background: var(--warn-soft); border: 1px solid var(--warn);
+            color: var(--warn); font-size: .85rem; font-weight: 600;
+            margin-bottom: var(--space-4);
+        }
+
+        /* Today badge */
+        .today-badge {
+            display: inline-flex; align-items: center; gap: 4px;
+            background: var(--success-soft); color: var(--success);
+            padding: 2px 8px; border-radius: 12px; font-size: .72rem; font-weight: 700;
+        }
+
+        /* Period select chips */
+        .period-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+        .period-chip {
+            padding: 4px 14px; border-radius: 20px; border: 2px solid var(--border);
+            font-size: .78rem; font-weight: 700; cursor: pointer; background: transparent;
+            color: var(--text-secondary); transition: all var(--t-fast);
+        }
+        .period-chip.selected, .period-chip:hover {
+            border-color: var(--accent); color: var(--accent); background: var(--accent-soft);
+        }
+
+        /* History edit indicator */
+        .edited-mark {
+            display: inline-block; width: 6px; height: 6px; background: var(--accent);
+            border-radius: 50%; margin-left: 4px; vertical-align: middle;
+        }
+
+        @media (max-width: 768px) {
+            .att-toolbar { flex-direction: column; align-items: stretch; }
+            .status-group { gap: 4px; }
+            .status-label { padding: 3px 7px; font-size: .68rem; }
+            .steps { flex-direction: column; border-radius: var(--radius-md); }
+            .step { border-right: none; border-bottom: 1px solid var(--border); }
+            .step:last-child { border-bottom: none; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════
+     SIDEBAR (copy từ dashboard)
+══════════════════════════════════ -->
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <div class="logo">
+            <div class="logo-mark"><span>F3</span></div>
+            <div class="logo-text"><strong>MyF3School</strong><small>Admin Portal</small></div>
+        </div>
+        <button class="sidebar-toggle" id="sidebarToggle"><i class="bi bi-layout-sidebar-reverse"></i></button>
+    </div>
+    <nav class="sidebar-nav">
+        <div class="nav-group"><span class="nav-label">Tổng quan</span>
+            <a href="/admin/dashboard" class="nav-item"><i class="bi bi-grid-1x2"></i><span>Dashboard</span></a>
+        </div>
+        <div class="nav-group"><span class="nav-label">Học tập</span>
+            <a href="/admin/courses"    class="nav-item"><i class="bi bi-journal-bookmark"></i><span>Môn học &amp; Lớp</span></a>
+            <a href="/admin/grades"     class="nav-item"><i class="bi bi-bar-chart-steps"></i><span>Điểm số</span></a>
+            <a href="/admin/attendance" class="nav-item active"><i class="bi bi-person-check"></i><span>Điểm danh</span></a>
+        </div>
+        <div class="nav-group"><span class="nav-label">Quản lý</span>
+            <a href="/admin/accounts"     class="nav-item"><i class="bi bi-people"></i><span>Tài khoản</span></a>
+            <a href="/admin/applications" class="nav-item"><i class="bi bi-file-earmark-text"></i><span>Đơn từ</span>
+                <span class="badge badge-warn" id="sidebarAppBadge" style="display:none"></span></a>
+            <a href="/admin/clubs"        class="nav-item"><i class="bi bi-collection"></i><span>Câu lạc bộ</span></a>
+        </div>
+        <div class="nav-group"><span class="nav-label">Hệ thống</span>
+            <a href="/admin/notifications" class="nav-item"><i class="bi bi-bell"></i><span>Thông báo</span>
+                <span class="badge badge-accent" id="sidebarNotifBadge" style="display:none"></span></a>
+            <a href="/admin/settings"      class="nav-item"><i class="bi bi-sliders"></i><span>Cài đặt</span></a>
+        </div>
+    </nav>
+    <div class="sidebar-footer">
+        <div class="user-chip">
+            <div class="user-avatar" id="sidebarAvatar">T</div>
+            <div class="user-info">
+                <span class="user-name" id="sidebarUserName">Giáo viên</span>
+                <span class="user-role" id="sidebarUserRole">Giáo viên</span>
+            </div>
+        </div>
+        <a href="/auth/logout" class="logout-btn"><i class="bi bi-box-arrow-right"></i></a>
+    </div>
+</aside>
+
+<!-- ══════════════════════════════════
+     MAIN WRAPPER
+══════════════════════════════════ -->
+<div class="main-wrapper" id="mainWrapper">
+
+    <!-- Topbar -->
+    <header class="topbar">
+        <div class="topbar-left">
+            <button class="topbar-btn topbar-toggle-mobile" id="mobileSidebarToggle"><i class="bi bi-list"></i></button>
+            <div class="breadcrumb-trail">Điểm danh</div>
+        </div>
+        <div class="topbar-right">
+            <div class="live-clock" id="liveClock"></div>
+            <div class="rt-indicator" id="rtIndicator"><span class="rt-dot"></span><span class="rt-label">Live</span></div>
+            <button class="topbar-btn notif-btn" id="topbarNotifBtn">
+                <i class="bi bi-bell"></i>
+                <span class="notif-count" id="topbarNotifCount" style="display:none">0</span>
+            </button>
+            <div class="notif-dropdown" id="notifDropdown">
+                <div class="notif-header"><span>Thông báo</span><button class="mark-all-read" id="markAllReadBtn">Đọc tất cả</button></div>
+                <div class="notif-list" id="notifList"><div class="notif-empty">Không có thông báo mới</div></div>
+            </div>
+            <button class="topbar-btn" id="themeToggle"><i class="bi bi-moon-stars"></i></button>
+        </div>
+    </header>
+
+    <!-- Page content -->
+    <main class="page-content">
+
+        <!-- Page header -->
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">Điểm Danh</h1>
+                <p class="page-subtitle">
+                    <span id="todayLabel"></span>
+                    <span class="today-badge"><i class="bi bi-calendar-check"></i> Chỉ điểm danh được trong ngày hôm nay</span>
+                </p>
+            </div>
+            <div class="page-actions">
+                <button class="btn btn-secondary btn-sm" onclick="loadMyClasses()"><i class="bi bi-arrow-clockwise"></i> Làm mới</button>
+            </div>
+        </div>
+
+        <!-- ── STEP INDICATOR ───────────────────────── -->
+        <div class="steps" id="stepBar">
+            <div class="step active" id="step1Indicator">
+                <div class="step-num">1</div>
+                <span>Chọn lớp & môn</span>
+            </div>
+            <div class="step" id="step2Indicator">
+                <div class="step-num">2</div>
+                <span>Thiết lập buổi học</span>
+            </div>
+            <div class="step" id="step3Indicator">
+                <div class="step-num">3</div>
+                <span>Điểm danh học sinh</span>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════
+             STEP 1: Chọn lớp / môn
+        ══════════════════════════════ -->
+        <div class="step-panel active" id="panelStep1">
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <div class="card-title">Lớp học của bạn</div>
+                        <div class="card-subtitle">Chọn môn học để bắt đầu điểm danh hôm nay</div>
+                    </div>
+                    <div style="display:flex;gap:8px;align-items:center">
+                        <select class="form-control form-control-sm" id="semesterSelect" onchange="loadMyClasses()">
+                            <option value="">-- Học kỳ --</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="mySectionsContainer">
+                    <div class="panel-loading"><span class="spinner"></span> Đang tải danh sách lớp...</div>
+                </div>
+            </div>
+
+            <!-- Lịch sử điểm danh -->
+            <div class="card" style="margin-top:var(--space-5)">
+                <div class="card-header">
+                    <div>
+                        <div class="card-title">Lịch sử điểm danh</div>
+                        <div class="card-subtitle">Các buổi đã điểm danh — có thể sửa trong ngày</div>
+                    </div>
+                    <select class="form-control form-control-sm" id="historyFilter" onchange="filterHistory()">
+                        <option value="">Tất cả môn</option>
+                    </select>
+                </div>
+                <div class="table-wrapper">
+                    <table class="att-table" id="historyTable">
+                        <thead>
+                        <tr>
+                            <th>Ngày</th>
+                            <th>Môn học</th>
+                            <th>Lớp</th>
+                            <th>Tiết</th>
+                            <th>Chủ đề</th>
+                            <th>Sĩ số</th>
+                            <th>Có mặt</th>
+                            <th>Vắng</th>
+                            <th>Trạng thái</th>
+                            <th>Thao tác</th>
+                        </tr>
+                        </thead>
+                        <tbody id="historyBody">
+                        <tr><td colspan="10" class="table-loading"><span class="spinner"></span></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════
+             STEP 2: Thiết lập buổi
+        ══════════════════════════════ -->
+        <div class="step-panel" id="panelStep2">
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <div class="card-title" id="step2Title">Thiết lập buổi học</div>
+                        <div class="card-subtitle" id="step2Subtitle">Nhập thông tin buổi điểm danh hôm nay</div>
+                    </div>
+                    <button class="btn btn-ghost btn-sm" onclick="goStep(1)"><i class="bi bi-arrow-left"></i> Quay lại</button>
+                </div>
+                <div class="card-body" style="padding: var(--space-5)">
+                    <!-- Lock banner (hiện khi đã có session hôm nay) -->
+                    <div class="lock-banner" id="lockBanner" style="display:none">
+                        <i class="bi bi-lock-fill" style="font-size:1.1rem;flex-shrink:0"></i>
+                        <span id="lockBannerMsg">Buổi học tiết này đã được điểm danh hôm nay. Bạn đang ở chế độ <strong>chỉnh sửa</strong>.</span>
+                    </div>
+
+                    <div class="form-grid" style="grid-template-columns: 1fr 1fr; gap: var(--space-4);">
+                        <!-- Ngày (cố định = hôm nay) -->
+                        <div class="form-group">
+                            <label class="form-label">Ngày điểm danh <span class="required">*</span></label>
+                            <input type="date" class="form-control" id="sessionDate" readonly />
+                            <div style="font-size:.73rem;color:var(--text-muted);margin-top:4px">
+                                <i class="bi bi-info-circle"></i> Chỉ cho phép điểm danh trong ngày hôm nay
+                            </div>
+                        </div>
+
+                        <!-- Chủ đề buổi học -->
+                        <div class="form-group">
+                            <label class="form-label">Chủ đề bài học</label>
+                            <input type="text" class="form-control" id="lessonTopic" placeholder="VD: Chương 3 — Hàm số bậc hai..." />
+                        </div>
+                    </div>
+
+                    <!-- Chọn tiết -->
+                    <div class="form-group">
+                        <label class="form-label">Chọn tiết <span class="required">*</span></label>
+                        <div id="periodChipsContainer" class="period-chips"></div>
+                        <input type="hidden" id="periodStart" />
+                        <input type="hidden" id="periodEnd" />
+                    </div>
+
+                    <div style="display:flex;justify-content:flex-end;margin-top:var(--space-4)">
+                        <button class="btn btn-primary" onclick="proceedToStep3()">
+                            <i class="bi bi-arrow-right"></i> Tiếp tục điểm danh
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════
+             STEP 3: Điểm danh học sinh
+        ══════════════════════════════ -->
+        <div class="step-panel" id="panelStep3">
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <div class="card-title" id="step3Title">Điểm danh học sinh</div>
+                        <div class="card-subtitle" id="step3Subtitle"></div>
+                    </div>
+                    <div style="display:flex;gap:8px">
+                        <button class="btn btn-ghost btn-sm" onclick="goStep(2)"><i class="bi bi-arrow-left"></i> Quay lại</button>
+                        <button class="btn btn-primary" id="submitAttBtn" onclick="submitAttendance()">
+                            <i class="bi bi-clipboard-check"></i> Lưu điểm danh
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Summary bar -->
+                <div class="att-summary" id="attSummary">
+                    <div class="att-sum-item"><div class="att-sum-dot" style="background:var(--text-muted)"></div> Tổng: <strong id="sumTotal">0</strong></div>
+                    <div class="att-sum-item"><div class="att-sum-dot" style="background:var(--success)"></div> Có mặt: <strong id="sumPresent">0</strong></div>
+                    <div class="att-sum-item"><div class="att-sum-dot" style="background:var(--danger)"></div> Vắng: <strong id="sumAbsent">0</strong></div>
+                    <div class="att-sum-item"><div class="att-sum-dot" style="background:var(--warn)"></div> Trễ: <strong id="sumLate">0</strong></div>
+                    <div class="att-sum-item"><div class="att-sum-dot" style="background:var(--info)"></div> Phép: <strong id="sumExcused">0</strong></div>
+                </div>
+
+                <!-- Bulk actions -->
+                <div class="bulk-bar">
+                    <span id="bulkLabel">Chọn trạng thái cho tất cả:</span>
+                    <button class="btn btn-success btn-sm" onclick="setAllStatus('PRESENT')"><i class="bi bi-check-all"></i> Tất cả có mặt</button>
+                    <button class="btn btn-danger  btn-sm" onclick="setAllStatus('ABSENT')"><i class="bi bi-x-circle"></i> Tất cả vắng</button>
+                    <button class="btn btn-warn    btn-sm" onclick="setAllStatus('LATE')"   style="background:var(--warn-soft);color:var(--warn);border:1px solid var(--warn)"><i class="bi bi-clock"></i> Tất cả trễ</button>
+                </div>
+
+                <!-- Attendance table -->
+                <div class="table-wrapper">
+                    <table class="att-table">
+                        <thead>
+                        <tr>
+                            <th style="width:40px">#</th>
+                            <th>Mã HS</th>
+                            <th>Họ và tên</th>
+                            <th>Trạng thái</th>
+                            <th>Ghi chú</th>
+                        </tr>
+                        </thead>
+                        <tbody id="attendanceBody">
+                        <tr><td colspan="5" class="table-loading"><span class="spinner"></span></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="display:flex;justify-content:flex-end;padding:var(--space-4);border-top:1px solid var(--border)">
+                    <button class="btn btn-primary" id="submitAttBtn2" onclick="submitAttendance()">
+                        <i class="bi bi-clipboard-check"></i> Lưu điểm danh
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+
+<script>
+
+    window.F3_API_BASE = '/api';
+    window.F3_USER_ID  =  2;
+
+</script>
+<script src="/static/js/theme.js"></script>
+<script src="/static/js/realtime.js"></script>
+<script src="/static/js/layout.js"></script>
+<script src="/static/js/F3Api.js"></script>
+<script>
+
+    (function () {
+        'use strict';
+
+
+        const TODAY = new Date().toISOString().slice(0, 10); // yyyy-MM-dd
+        const TODAY_LABEL = new Date().toLocaleDateString('vi-VN', {
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+        });
+
+        /* ── State ────────────────────────────── */
+        let mySections    = [];   // CourseSection[] của giáo viên
+        let allHistory    = [];   // AttendanceSession[] lịch sử
+        let selectedSection = null;  // section đang chọn
+        let existingSession = null;  // nếu hôm nay đã có session → edit mode
+        let students      = [];   // StudentProfile[] của lớp
+        let currentStep   = 1;
+        let semesterId    = null;
+
+        /* ── Period presets ───────────────────── */
+        const PERIOD_PRESETS = [
+            { label: 'Tiết 1-2', start: 1, end: 2 },
+            { label: 'Tiết 3-4', start: 3, end: 4 },
+            { label: 'Tiết 5-6', start: 5, end: 6 },
+            { label: 'Tiết 7-8', start: 7, end: 8 },
+            { label: 'Tiết 1',   start: 1, end: 1 },
+            { label: 'Tiết 2',   start: 2, end: 2 },
+            { label: 'Tiết 3',   start: 3, end: 3 },
+            { label: 'Tiết 4',   start: 4, end: 4 },
+            { label: 'Tiết 5',   start: 5, end: 5 },
+        ];
+
+        /* ─────────────────────────────────────────
+           INIT
+        ───────────────────────────────────────── */
+        document.addEventListener('DOMContentLoaded', async () => {
+            document.getElementById('todayLabel').textContent = TODAY_LABEL + ' — ';
+            document.getElementById('sessionDate').value = TODAY;
+
+            buildPeriodChips();
+            await loadSemesters();
+            await loadMyClasses();
+            await loadHistory();
+        });
+
+        /* ── Build period chips ───────────────── */
+        function buildPeriodChips() {
+            const c = document.getElementById('periodChipsContainer');
+            c.innerHTML = PERIOD_PRESETS.map((p, i) => `
+            <button class="period-chip" data-start="${p.start}" data-end="${p.end}"
+                onclick="selectPeriod(this, ${p.start}, ${p.end})">
+                ${escHtml(p.label)}
+            </button>`).join('');
+        }
+
+        window.selectPeriod = function (btn, start, end) {
+            document.querySelectorAll('.period-chip').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            document.getElementById('periodStart').value = start;
+            document.getElementById('periodEnd').value   = end;
+            // Kiểm tra xem đã có session chưa
+            checkExistingSession(start);
+        };
+
+        /* ─────────────────────────────────────────
+           LOAD DATA
+        ───────────────────────────────────────── */
+
+        /* Học kỳ */
+        async function loadSemesters() {
+            try {
+                const res = await F3Api.get('/semesters');
+                const list = res?.data || res?.content || [];
+                const sel  = document.getElementById('semesterSelect');
+                list.forEach(s => {
+                    const opt = document.createElement('option');
+                    opt.value       = s.id;
+                    opt.textContent = s.name;
+                    if (s.isCurrent) { opt.selected = true; semesterId = s.id; }
+                    sel.appendChild(opt);
+                });
+                if (!semesterId && list.length) semesterId = list[0].id;
+            } catch (e) {
+                console.warn('loadSemesters', e.message);
+            }
+        }
+
+        /* Lớp / môn của giáo viên */
+        window.loadMyClasses = async function () {
+            const sid = document.getElementById('semesterSelect').value || semesterId;
+            semesterId = sid;
+            const container = document.getElementById('mySectionsContainer');
+            container.innerHTML = '<div class="panel-loading"><span class="spinner"></span> Đang tải...</div>';
+
+            try {
+                // API: lấy course section mà giáo viên này dạy trong học kỳ
+                const res = await F3Api.get(
+                    `/course-sections?teacherId=${window.F3_USER_ID}&semesterId=${sid || ''}`
+                );
+                mySections = res?.data?.content || res?.data || res || [];
+
+                if (!mySections.length) {
+                    container.innerHTML = `
+                    <div class="empty-state" style="padding:var(--space-8)">
+                        <div class="empty-state-icon"><i class="bi bi-journal-x"></i></div>
+                        <div class="empty-state-title">Không có lớp nào</div>
+                        <div class="empty-state-desc">Bạn chưa được phân công lớp trong học kỳ này</div>
+                    </div>`;
+                    return;
+                }
+
+                renderSectionCards(mySections);
+
+                // Populate history filter
+                const hf = document.getElementById('historyFilter');
+                hf.innerHTML = '<option value="">Tất cả môn</option>';
+                mySections.forEach(s => {
+                    const opt = document.createElement('option');
+                    opt.value = s.id;
+                    opt.textContent = `${s.subject?.name || 'Môn'} — ${s.schoolClass?.name || ''}`;
+                    hf.appendChild(opt);
+                });
+
+            } catch (e) {
+                container.innerHTML = `
+                <div class="empty-state" style="padding:var(--space-8)">
+                    <div class="empty-state-icon"><i class="bi bi-exclamation-triangle"></i></div>
+                    <div class="empty-state-title">Không thể tải dữ liệu</div>
+                    <div class="empty-state-desc">${escHtml(e.message)}</div>
+                </div>`;
+            }
+        };
+
+        function renderSectionCards(sections) {
+            const container = document.getElementById('mySectionsContainer');
+            container.innerHTML = `
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:var(--space-4);padding:var(--space-4)">
+                ${sections.map(s => sectionCardHtml(s)).join('')}
+            </div>`;
+        }
+
+        function sectionCardHtml(s) {
+            const className   = s.schoolClass?.name  || 'N/A';
+            const subjectName = s.subject?.name       || 'N/A';
+            const subjectCode = s.subject?.code       || '';
+            const initials    = subjectCode.slice(0, 2).toUpperCase() || 'MH';
+
+            return `
+        <div class="card" style="cursor:pointer;transition:all var(--t-fast);border:2px solid transparent"
+             onmouseenter="this.style.borderColor='var(--accent)'"
+             onmouseleave="this.style.borderColor='transparent'"
+             onclick="selectSection(${s.id})">
+            <div class="card-body" style="padding:var(--space-4);display:flex;gap:var(--space-3);align-items:flex-start">
+                <div class="avatar" style="background:var(--accent-soft);color:var(--accent);font-size:.85rem;flex-shrink:0">${initials}</div>
+                <div style="flex:1;min-width:0">
+                    <div style="font-weight:700;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(subjectName)}</div>
+                    <div style="font-size:.78rem;color:var(--text-muted);margin-top:2px">
+                        <i class="bi bi-mortarboard"></i> Lớp ${escHtml(className)}
+                        &nbsp;·&nbsp; <i class="bi bi-tag"></i> ${escHtml(subjectCode)}
+                    </div>
+                    <div style="margin-top:var(--space-3)">
+                        <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();selectSection(${s.id})">
+                            <i class="bi bi-clipboard-plus"></i> Điểm danh hôm nay
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+        }
+
+        /* Lịch sử */
+        async function loadHistory() {
+            const tbody = document.getElementById('historyBody');
+            try {
+                // Lấy session của tất cả section mà giáo viên dạy
+                const uid  = window.F3_USER_ID;
+                const res  = await F3Api.get(`/attendance/sessions?teacherId=${uid}&size=50`);
+                allHistory = res?.data?.content || res?.data || [];
+                renderHistory(allHistory);
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="10" class="table-empty">Không thể tải lịch sử</td></tr>`;
+            }
+        }
+
+        function renderHistory(list) {
+            const tbody = document.getElementById('historyBody');
+            if (!list.length) {
+                tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state" style="padding:var(--space-6)">
+                <div class="empty-state-icon"><i class="bi bi-calendar-x"></i></div>
+                <div class="empty-state-desc">Chưa có buổi điểm danh nào</div>
+            </div></td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = list.map(session => {
+                const isToday   = session.sessionDate === TODAY;
+                const canEdit   = isToday;
+                const subjectName = session.courseSection?.subject?.name  || '—';
+                const className   = session.courseSection?.schoolClass?.name || '—';
+                const present     = session.presentCount  ?? '—';
+                const absent      = session.absentCount   ?? '—';
+                const total       = session.totalStudents ?? '—';
+
+                return `<tr>
+                <td>
+                    ${escHtml(fmtDate(session.sessionDate))}
+                    ${isToday ? '<span class="today-badge" style="margin-left:4px"><i class="bi bi-clock"></i> Hôm nay</span>' : ''}
+                </td>
+                <td><strong>${escHtml(subjectName)}</strong></td>
+                <td>${escHtml(className)}</td>
+                <td>Tiết ${session.periodStart}${session.periodEnd !== session.periodStart ? '–' + session.periodEnd : ''}</td>
+                <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-muted);font-size:.8rem">
+                    ${escHtml(session.lessonTopic || '—')}
+                </td>
+                <td>${total}</td>
+                <td><span style="color:var(--success);font-weight:700">${present}</span></td>
+                <td><span style="color:var(--danger);font-weight:700">${absent}</span></td>
+                <td>
+                    ${isToday
+                    ? '<span class="status-chip sc-PRESENT"><i class="bi bi-check-circle"></i> Đã điểm</span>'
+                    : '<span class="status-chip sc-NOT_YET"><i class="bi bi-lock"></i> Đã khoá</span>'}
+                </td>
+                <td>
+                    ${canEdit
+                    ? `<button class="btn btn-secondary btn-sm" onclick="editSession(${session.id}, ${session.courseSection?.id})">
+                               <i class="bi bi-pencil"></i> Sửa
+                           </button>`
+                    : '<span style="color:var(--text-muted);font-size:.78rem">Không thể sửa</span>'}
+                </td>
+            </tr>`;
+            }).join('');
+        }
+
+        window.filterHistory = function () {
+            const val = document.getElementById('historyFilter').value;
+            if (!val) return renderHistory(allHistory);
+            renderHistory(allHistory.filter(s => String(s.courseSection?.id) === val));
+        };
+
+        /* ─────────────────────────────────────────
+           STEP NAVIGATION
+        ───────────────────────────────────────── */
+        window.goStep = function (n) {
+            currentStep = n;
+            [1, 2, 3].forEach(i => {
+                document.getElementById(`panelStep${i}`).classList.toggle('active', i === n);
+                const ind = document.getElementById(`step${i}Indicator`);
+                ind.classList.remove('active', 'done');
+                if (i < n)  ind.classList.add('done');
+                if (i === n) ind.classList.add('active');
+            });
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        /* ─────────────────────────────────────────
+           SELECT SECTION → STEP 2
+        ───────────────────────────────────────── */
+        window.selectSection = async function (sectionId) {
+            selectedSection = mySections.find(s => s.id === sectionId);
+            if (!selectedSection) return;
+
+            const subjectName = selectedSection.subject?.name  || 'Môn học';
+            const className   = selectedSection.schoolClass?.name || 'Lớp';
+
+            document.getElementById('step2Title').textContent =
+                `${subjectName} — Lớp ${className}`;
+            document.getElementById('step2Subtitle').textContent =
+                `Thiết lập buổi điểm danh hôm nay (${fmtDate(TODAY)})`;
+
+            // Reset form
+            document.getElementById('sessionDate').value = TODAY;
+            document.getElementById('lessonTopic').value = '';
+            document.getElementById('periodStart').value  = '';
+            document.getElementById('periodEnd').value    = '';
+            document.querySelectorAll('.period-chip').forEach(b => b.classList.remove('selected'));
+            existingSession = null;
+            document.getElementById('lockBanner').style.display = 'none';
+
+            goStep(2);
+        };
+
+        /* Kiểm tra đã điểm danh tiết này hôm nay chưa */
+        async function checkExistingSession(periodStart) {
+            if (!selectedSection) return;
+            try {
+                const res = await F3Api.get(
+                    `/attendance/sessions/check?sectionId=${selectedSection.id}&date=${TODAY}&periodStart=${periodStart}`
+                );
+                existingSession = res?.data || null;
+
+                const banner = document.getElementById('lockBanner');
+                if (existingSession) {
+                    banner.style.display = 'flex';
+                    document.getElementById('lockBannerMsg').innerHTML =
+                        `Tiết <strong>${periodStart}</strong> hôm nay đã có buổi điểm danh (ID: ${existingSession.id}). Bạn đang ở chế độ <strong>chỉnh sửa</strong>.`;
+                    // Pre-fill lesson topic
+                    if (existingSession.lessonTopic) {
+                        document.getElementById('lessonTopic').value = existingSession.lessonTopic;
+                    }
+                } else {
+                    banner.style.display = 'none';
+                }
+            } catch (_) {
+                existingSession = null;
+                document.getElementById('lockBanner').style.display = 'none';
+            }
+        }
+
+        /* ─────────────────────────────────────────
+           PROCEED → STEP 3 (load students)
+        ───────────────────────────────────────── */
+        window.proceedToStep3 = async function () {
+            const periodStart = +document.getElementById('periodStart').value;
+            const periodEnd   = +document.getElementById('periodEnd').value;
+
+            if (!periodStart) {
+                F3Toast.warn('Chưa chọn tiết', 'Vui lòng chọn tiết học');
+                return;
+            }
+
+            const subjectName = selectedSection.subject?.name  || 'Môn học';
+            const className   = selectedSection.schoolClass?.name || 'Lớp';
+            document.getElementById('step3Title').textContent =
+                `Điểm danh — ${subjectName} (Lớp ${className})`;
+            document.getElementById('step3Subtitle').textContent =
+                `${fmtDate(TODAY)} · Tiết ${periodStart}${periodEnd !== periodStart ? '–' + periodEnd : ''}`;
+
+            goStep(3);
+            await loadStudentsForSection();
+        };
+
+        async function loadStudentsForSection() {
+            const tbody = document.getElementById('attendanceBody');
+            tbody.innerHTML = `<tr><td colspan="5" class="table-loading"><span class="spinner"></span> Đang tải danh sách học sinh...</td></tr>`;
+
+            try {
+                // Lấy danh sách học sinh trong lớp
+                const classId = selectedSection.schoolClass?.id;
+                const res = await F3Api.get(`/students?classId=${classId}&size=200`);
+                students   = res?.data?.content || res?.data || [];
+
+                if (!students.length) {
+                    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state" style="padding:var(--space-6)">
+                    <div class="empty-state-icon"><i class="bi bi-people"></i></div>
+                    <div class="empty-state-desc">Lớp chưa có học sinh</div>
+                </div></td></tr>`;
+                    return;
+                }
+
+                // Nếu edit mode → nạp trạng thái cũ
+                let existingRecords = {};
+                if (existingSession) {
+                    try {
+                        const rr = await F3Api.get(`/attendance/sessions/${existingSession.id}`);
+                        const recs = rr?.data?.records || [];
+                        recs.forEach(r => { existingRecords[r.studentId] = r; });
+                    } catch (_) {}
+                }
+
+                renderAttendanceTable(students, existingRecords);
+                updateSummary();
+
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="5" class="table-empty">${escHtml(e.message)}</td></tr>`;
+            }
+        }
+
+        function renderAttendanceTable(studentList, existingRecords) {
+            const tbody = document.getElementById('attendanceBody');
+            document.getElementById('sumTotal').textContent = studentList.length;
+
+            tbody.innerHTML = studentList.map((stu, idx) => {
+                const existing = existingRecords[stu.id] || existingRecords[stu.studentId];
+                const defStatus = existing?.status || 'PRESENT';
+                const defNote   = existing?.note   || '';
+                const stuId     = stu.id || stu.studentId;
+                const stuCode   = stu.studentCode || stu.code || 'N/A';
+                const stuName   = stu.fullName || stu.user?.fullName || stu.name || '—';
+
+                return `<tr id="row-${stuId}">
+                <td style="color:var(--text-muted);font-size:.8rem">${idx + 1}</td>
+                <td style="font-family:monospace;font-size:.82rem;color:var(--text-muted)">${escHtml(stuCode)}</td>
+                <td><strong>${escHtml(stuName)}</strong></td>
+                <td>
+                    <div class="status-group">
+                        ${statusRadio(stuId, 'PRESENT', 'Có mặt', 'sl-present', defStatus)}
+                        ${statusRadio(stuId, 'ABSENT',  'Vắng',   'sl-absent',  defStatus)}
+                        ${statusRadio(stuId, 'LATE',    'Trễ',    'sl-late',    defStatus)}
+                        ${statusRadio(stuId, 'EXCUSED', 'Phép',   'sl-excused', defStatus)}
+                    </div>
+                </td>
+                <td>
+                    <input type="text" class="note-input" id="note-${stuId}"
+                           value="${escHtml(defNote)}"
+                           placeholder="Ghi chú (nếu có)..." />
+                </td>
+            </tr>`;
+            }).join('');
+
+            // Listen for changes
+            tbody.addEventListener('change', updateSummary);
+        }
+
+        function statusRadio(stuId, value, label, cls, checked) {
+            const id = `s-${stuId}-${value}`;
+            return `
+            <input type="radio" class="status-radio" name="status-${stuId}"
+                   id="${id}" value="${value}" ${checked === value ? 'checked' : ''} />
+            <label class="status-label ${cls}" for="${id}">${label}</label>`;
+        }
+
+        /* Update summary counters */
+        function updateSummary() {
+            let present = 0, absent = 0, late = 0, excused = 0;
+            students.forEach(stu => {
+                const stuId = stu.id || stu.studentId;
+                const checked = document.querySelector(`input[name="status-${stuId}"]:checked`);
+                const val = checked?.value || 'PRESENT';
+                if (val === 'PRESENT') present++;
+                else if (val === 'ABSENT')  absent++;
+                else if (val === 'LATE')    late++;
+                else if (val === 'EXCUSED') excused++;
+            });
+            document.getElementById('sumPresent').textContent = present;
+            document.getElementById('sumAbsent').textContent  = absent;
+            document.getElementById('sumLate').textContent    = late;
+            document.getElementById('sumExcused').textContent = excused;
+        }
+
+        /* Set all students to same status */
+        window.setAllStatus = function (status) {
+            students.forEach(stu => {
+                const stuId = stu.id || stu.studentId;
+                const radio = document.getElementById(`s-${stuId}-${status}`);
+                if (radio) radio.checked = true;
+            });
+            updateSummary();
+        };
+
+        /* ─────────────────────────────────────────
+           SUBMIT ATTENDANCE
+        ───────────────────────────────────────── */
+        window.submitAttendance = async function () {
+            const btn1 = document.getElementById('submitAttBtn');
+            const btn2 = document.getElementById('submitAttBtn2');
+
+            const periodStart = +document.getElementById('periodStart').value;
+            const periodEnd   = +document.getElementById('periodEnd').value;
+            const lessonTopic = document.getElementById('lessonTopic').value.trim();
+
+            if (!periodStart) { F3Toast.warn('Lỗi', 'Thiếu thông tin tiết học'); return; }
+            if (!students.length) { F3Toast.warn('Lỗi', 'Không có học sinh nào'); return; }
+
+            // Validate: bắt buộc chọn status
+            let allOk = true;
+            students.forEach(stu => {
+                const stuId  = stu.id || stu.studentId;
+                const checked = document.querySelector(`input[name="status-${stuId}"]:checked`);
+                if (!checked) allOk = false;
+            });
+            if (!allOk) { F3Toast.warn('Chưa đủ', 'Vui lòng chọn trạng thái cho tất cả học sinh'); return; }
+
+            F3Loading(btn1, true);
+            F3Loading(btn2, true);
+
+            const records = students.map(stu => {
+                const stuId  = stu.id || stu.studentId;
+                const checked = document.querySelector(`input[name="status-${stuId}"]:checked`);
+                const note    = document.getElementById(`note-${stuId}`)?.value.trim() || null;
+                return { studentId: stuId, status: checked.value, note };
+            });
+
+            const payload = {
+                courseSectionId: selectedSection.id,
+                sessionDate:     TODAY,
+                periodStart,
+                periodEnd,
+                lessonTopic:     lessonTopic || null,
+                takenById:       window.F3_USER_ID,
+                records
+            };
+
+            try {
+                if (existingSession) {
+                    // Cập nhật từng record (PUT /attendance/records/:id)
+                    await updateExistingSession(existingSession.id, records, lessonTopic);
+                    F3Toast.success('Đã cập nhật', `Điểm danh buổi học đã được chỉnh sửa thành công`);
+                } else {
+                    await F3Api.post('/attendance/sessions', payload);
+                    F3Toast.success('Lưu thành công', `Đã điểm danh ${records.length} học sinh`);
+                }
+
+                // Refresh history
+                await loadHistory();
+                // Go back to step 1 after short delay
+                setTimeout(() => goStep(1), 800);
+
+            } catch (e) {
+                F3Toast.danger('Lỗi', e.message);
+            } finally {
+                F3Loading(btn1, false);
+                F3Loading(btn2, false);
+            }
+        };
+
+        async function updateExistingSession(sessionId, records, lessonTopic) {
+            // Cập nhật từng record (có thể cần API riêng cho update session lesson topic)
+            const promises = records.map(r =>
+                F3Api.put(`/attendance/records/session/${sessionId}/student/${r.studentId}`, {
+                    status: r.status,
+                    note:   r.note
+                }).catch(() => {}) // ignore per-record errors gracefully
+            );
+            await Promise.all(promises);
+        }
+
+        /* ─────────────────────────────────────────
+           EDIT SESSION (từ history)
+        ───────────────────────────────────────── */
+        window.editSession = async function (sessionId, sectionId) {
+            // Tìm section
+            selectedSection = mySections.find(s => s.id === sectionId);
+            if (!selectedSection) {
+                F3Toast.warn('Không tìm thấy', 'Không tìm được thông tin môn học');
+                return;
+            }
+
+            // Lấy thông tin session
+            try {
+                const res = await F3Api.get(`/attendance/sessions/${sessionId}`);
+                const sessionData = res?.data?.session || res?.data || {};
+                existingSession = { id: sessionId, ...sessionData };
+
+                // Điền form step 2
+                document.getElementById('lessonTopic').value = existingSession.lessonTopic || '';
+                document.getElementById('sessionDate').value  = TODAY;
+
+                // Chọn period chip
+                const pStart = existingSession.periodStart;
+                const pEnd   = existingSession.periodEnd;
+                document.getElementById('periodStart').value = pStart;
+                document.getElementById('periodEnd').value   = pEnd;
+                document.querySelectorAll('.period-chip').forEach(b => {
+                    if (+b.dataset.start === pStart && +b.dataset.end === pEnd) b.classList.add('selected');
+                    else b.classList.remove('selected');
+                });
+
+                document.getElementById('step2Title').textContent =
+                    `${selectedSection.subject?.name} — Lớp ${selectedSection.schoolClass?.name}`;
+                document.getElementById('step2Subtitle').textContent =
+                    `Chỉnh sửa buổi điểm danh hôm nay (${fmtDate(TODAY)})`;
+
+                // Hiện lock banner
+                document.getElementById('lockBanner').style.display = 'flex';
+                document.getElementById('lockBannerMsg').innerHTML =
+                    `Đang chỉnh sửa buổi điểm danh tiết <strong>${pStart}</strong> hôm nay.`;
+
+                goStep(2);
+
+            } catch (e) {
+                F3Toast.danger('Lỗi', 'Không thể tải thông tin buổi học: ' + e.message);
+            }
+        };
+
+        /* ─────────────────────────────────────────
+           HELPERS
+        ───────────────────────────────────────── */
+        function escHtml(s) {
+            return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        }
+        function fmtDate(d) {
+            if (!d) return '—';
+            return new Date(d + (d.length === 10 ? 'T00:00:00' : '')).toLocaleDateString('vi-VN', {
+                day: '2-digit', month: '2-digit', year: 'numeric'
+            });
+        }
+
+    })();
+</script>
+</body>
+</html>

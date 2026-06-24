@@ -1,0 +1,83 @@
+/* ═══════════════════════════════════════════
+   theme.css — MyF3School Admin
+═══════════════════════════════════════════ */
+:root {
+    --font-display: 'Syne', sans-serif;
+    --font-body:    'DM Sans', sans-serif;
+
+    --accent:       #4f8ef7;
+    --accent-soft:  rgba(79, 142, 247, .12);
+    --success:      #34c98f;
+    --success-soft: rgba(52, 201, 143, .12);
+    --danger:       #f05e5e;
+    --danger-soft:  rgba(240, 94, 94, .12);
+    --warn:         #f59e0b;
+    --warn-soft:    rgba(245, 158, 11, .12);
+    --info:         #38bdf8;
+    --info-soft:    rgba(56, 189, 248, .12);
+
+    --t-fast:  120ms;
+    --t-base:  220ms;
+    --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+    --radius-sm:   4px;
+    --radius-md:   8px;
+    --radius-lg:   12px;
+    --radius-xl:   16px;
+    --radius-full: 9999px;
+
+    --space-1: 4px;  --space-2: 8px;   --space-3: 12px;
+    --space-4: 16px; --space-5: 20px;  --space-6: 24px;
+    --space-8: 32px; --space-10: 40px; --space-12: 48px;
+
+    --sidebar-w:  240px;
+    --topbar-h:   60px;
+}
+
+/* ─── DARK THEME (default) ─── */
+[data-theme="dark"] {
+    --bg-base:       #0f1117;
+    --bg-elevated:   #181c26;
+    --bg-hover:      rgba(255,255,255,.04);
+    --bg-active:     rgba(255,255,255,.07);
+    --border:        rgba(255,255,255,.08);
+    --text-primary:  #f0f1f5;
+    --text-secondary:#9ca3b0;
+    --text-muted:    #5a6072;
+    --shadow:        0 4px 24px rgba(0,0,0,.4);
+}
+
+/* ─── LIGHT THEME ─── */
+[data-theme="light"] {
+    --bg-base:       #f4f5f8;
+    --bg-elevated:   #ffffff;
+    --bg-hover:      rgba(0,0,0,.04);
+    --bg-active:     rgba(0,0,0,.07);
+    --border:        rgba(0,0,0,.09);
+    --text-primary:  #111318;
+    --text-secondary:#4b5263;
+    --text-muted:    #9ca3af;
+    --shadow:        0 4px 24px rgba(0,0,0,.1);
+}
+
+/* ─── RESET ─── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    font-family: var(--font-body);
+    background: var(--bg-base);
+    color: var(--text-primary);
+    display: flex;
+    min-height: 100vh;
+    overflow-x: hidden;
+    font-size: 14px;
+    line-height: 1.5;
+}
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; cursor: pointer; }
+input, select, textarea { font-family: inherit; }
+
+/* ─── TEXT UTILITIES ─── */
+.text-sm   { font-size: .82rem; }
+.text-xs   { font-size: .72rem; }
+.text-muted   { color: var(--text-muted); }
+.text-primary { color: var(--text-primary); }

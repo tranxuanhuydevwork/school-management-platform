@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+    <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quản lý Đơn từ — MyF3School Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,400&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="/static/css/theme.css" />
+    <link rel="stylesheet" href="/static/css/layout.css" />
+    <link rel="stylesheet" href="/static/css/components.css" />
+    <script src="/static/js/F3Api.js"></script>
+
+</head>
+<body>
+
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <div class="logo"><div class="logo-mark"><span>F3</span></div><div class="logo-text"><strong>MyF3School</strong><small>Admin Portal</small></div></div>
+        <button class="sidebar-toggle" id="sidebarToggle"><i class="bi bi-layout-sidebar-reverse"></i></button>
+    </div>
+    <nav class="sidebar-nav">
+        <div class="nav-group"><span class="nav-label">Tổng quan</span><a href="/admin/dashboard" class="nav-item"><i class="bi bi-grid-1x2"></i><span>Dashboard</span></a></div>
+        <div class="nav-group"><span class="nav-label">Học tập</span>
+            <a href="/admin/courses"    class="nav-item"><i class="bi bi-journal-bookmark"></i><span>Môn học &amp; Lớp</span></a>
+            <a href="/admin/grades"     class="nav-item"><i class="bi bi-bar-chart-steps"></i><span>Điểm số</span></a>
+            <a href="/admin/attendance" class="nav-item"><i class="bi bi-person-check"></i><span>Điểm danh</span></a></div>
+        <div class="nav-group"><span class="nav-label">Quản lý</span>
+            <a href="/admin/accounts"     class="nav-item"><i class="bi bi-people"></i><span>Tài khoản</span></a>
+            <a href="/admin/applications" class="nav-item active"><i class="bi bi-file-earmark-text"></i><span>Đơn từ</span><span class="badge badge-warn" id="sidebarAppBadge" style="display:none"></span></a>
+            <a href="/admin/clubs"        class="nav-item"><i class="bi bi-collection"></i><span>Câu lạc bộ</span></a></div>
+        <div class="nav-group"><span class="nav-label">Hệ thống</span>
+            <a href="/admin/notifications" class="nav-item"><i class="bi bi-bell"></i><span>Thông báo</span><span class="badge badge-accent" id="sidebarNotifBadge" style="display:none"></span></a>
+            <a href="/admin/settings"      class="nav-item"><i class="bi bi-sliders"></i><span>Cài đặt</span></a></div>
+    </nav>
+    <div class="sidebar-footer">
+        <div class="user-chip"><div class="user-avatar" id="sidebarAvatar">A</div>
+            <div class="user-info"><span class="user-name" id="sidebarUserName">Admin</span><span class="user-role">Administrator</span></div></div>
+        <a href="/auth/logout" class="logout-btn"><i class="bi bi-box-arrow-right"></i></a>
+    </div>
+</aside>
+
+<div class="main-wrapper" id="mainWrapper">
+    <header class="topbar">
+        <div class="topbar-left">
+            <button class="topbar-btn topbar-toggle-mobile" id="mobileSidebarToggle"><i class="bi bi-list"></i></button>
+            <div class="breadcrumb-trail">Quản lý / Đơn từ</div>
+        </div>
+        <div class="topbar-right">
+            <div class="live-clock" id="liveClock"></div>
+            <div class="rt-indicator" id="rtIndicator"><span class="rt-dot"></span><span class="rt-label">Live</span></div>
+            <button class="topbar-btn notif-btn" id="topbarNotifBtn"><i class="bi bi-bell"></i><span class="notif-count" id="topbarNotifCount" style="display:none">0</span></button>
+            <div class="notif-dropdown" id="notifDropdown">
+                <div class="notif-header"><span>Thông báo</span><button class="mark-all-read" id="markAllReadBtn">Đọc tất cả</button></div>
+                <div class="notif-list" id="notifList"><div class="notif-empty">Không có thông báo mới</div></div>
+            </div>
+            <button class="topbar-btn" id="themeToggle"><i class="bi bi-moon-stars"></i></button>
+        </div>
+    </header>
+
+    <main class="page-content">
+        <div class="page-header">
+            <div><h1 class="page-title">Đơn từ</h1><p class="page-subtitle">Quản lý và duyệt đơn từ của học sinh</p></div>
+            <div class="page-actions">
+                <span style="font-size:.78rem;color:var(--text-muted)" id="lastUpdated"></span>
+                <button class="btn btn-secondary btn-sm" onclick="loadApplications()"><i class="bi bi-arrow-clockwise"></i> Làm mới</button>
+            </div>
+        </div>
+
+        <!-- Status Tabs -->
+        <div class="status-tabs" id="statusTabs">
+            <button class="stab active" data-status="">Tất cả</button>
+            <button class="stab" data-status="PENDING">Chờ duyệt <span class="badge badge-warn" id="pendingCount">0</span></button>
+            <button class="stab" data-status="APPROVED">Đã duyệt</button>
+            <button class="stab" data-status="REJECTED">Từ chối</button>
+            <button class="stab" data-status="DRAFT">Nháp</button>
+        </div>
+
+        <!-- Search + Filter -->
+        <div class="search-bar">
+            <div class="input-group" style="flex:1;min-width:220px">
+                <i class="bi bi-search input-group-icon"></i>
+                <input type="text" class="form-control" id="searchInput" placeholder="Tìm theo tiêu đề, ID học sinh…" oninput="debounceSearch()"/>
+            </div>
+            <select class="form-control" id="typeFilter" onchange="loadApplications()" style="width:190px">
+                <option value="">Tất cả loại đơn</option>
+                <option value="LEAVE_REQUEST">Xin nghỉ</option>
+                <option value="TRANSCRIPT_REQUEST">Xin bảng điểm</option>
+                <option value="STUDENT_VERIFICATION">Xác nhận học sinh</option>
+                <option value="STUDENT_CARD_REISSUE">Cấp lại thẻ</option>
+                <option value="COURSE_REGISTRATION">Ghi danh</option>
+                <option value="TRANSFER_REQUEST">Chuyển lớp</option>
+                <option value="GRADE_APPEAL">Phúc khảo</option>
+            </select>
+        </div>
+
+        <!-- Table -->
+        <div class="card" style="padding:0">
+            <div class="table-wrapper" style="border:none;border-radius:var(--radius-lg)">
+                <table class="table">
+                    <thead><tr>
+                        <th>ID</th>
+                        <th>Học sinh</th>
+                        <th>Loại đơn</th>
+                        <th>Tiêu đề</th>
+                        <th>Trạng thái</th>
+                        <th class="sortable">Ngày tạo</th>
+                        <th>Hành động</th>
+                    </tr></thead>
+                    <tbody id="appsTableBody">
+                    <tr><td colspan="7" class="table-loading"><span class="spinner"></span></td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div style="padding:var(--space-4) var(--space-5);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+                <span class="text-sm text-muted" id="tableInfo">Đang tải…</span>
+                <div class="pagination" id="pagination"></div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Review / Detail Modal -->
+<div class="modal-overlay" id="reviewModal">
+    <div class="modal">
+        <div class="modal-header">
+            <span class="modal-title" id="reviewModalTitle">Duyệt đơn</span>
+            <button class="modal-close" data-modal-close="reviewModal"><i class="bi bi-x"></i></button>
+        </div>
+        <div class="modal-body" id="reviewModalBody"></div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" data-modal-close="reviewModal">Hủy</button>
+            <button class="btn btn-danger"  id="rejectBtn"  onclick="submitReview('REJECTED')"><i class="bi bi-x-circle"></i> Từ chối</button>
+            <button class="btn btn-success" id="approveBtn" onclick="submitReview('APPROVED')"><i class="bi bi-check-circle"></i> Duyệt</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    window.F3_USER_ID  = /*[[${userId}]]*/ 1;
+    window.F3_API_BASE = /*[[${apiBase}]]*/ '/api';
+</script>
+<script src="/static/js/theme.js"></script>
+<script src="/static/js/realtime.js"></script>
+<script src="/static/js/layout.js"></script>
+<script>
+    let currentStatus = '';
+    let currentPage   = 0;
+    let currentApp    = null;
+    let searchTimer   = null;
+    const PAGE_SIZE   = 15;
+
+    // ── Label mappings ─────────────────────────────────────────
+    const REQUEST_TYPE_LABELS = {
+        LEAVE_REQUEST:        'Xin nghỉ',
+        TRANSCRIPT_REQUEST:   'Xin bảng điểm',
+        STUDENT_VERIFICATION: 'Xác nhận HS',
+        STUDENT_CARD_REISSUE: 'Cấp lại thẻ',
+        COURSE_REGISTRATION:  'Ghi danh',
+        TRANSFER_REQUEST:     'Chuyển lớp',
+        GRADE_APPEAL:         'Phúc khảo',
+    };
+    const STATUS_CHIP  = { PENDING:'chip-warn', APPROVED:'chip-success', REJECTED:'chip-danger', DRAFT:'chip-muted' };
+    const STATUS_LABEL = { PENDING:'Chờ duyệt', APPROVED:'Đã duyệt', REJECTED:'Từ chối', DRAFT:'Nháp' };
+
+    // ── Helpers ────────────────────────────────────────────────
+    function escHtml(s) {
+        if (!s) return '';
+        return String(s)
+            .replace(/&/g,'&amp;')
+            .replace(/</g,'&lt;')
+            .replace(/>/g,'&gt;')
+            .replace(/"/g,'&quot;');
+    }
+
+    function fmtDate(s) {
+        if (!s) return '—';
+        const d = new Date(s);
+        return isNaN(d) ? s :
+            d.toLocaleDateString('vi-VN', {
+                day:'2-digit', month:'2-digit', year:'numeric',
+                hour:'2-digit', minute:'2-digit'
+            });
+    }
+
+    function F3Loading(btn, on) {
+        if (!btn) return;
+        btn.disabled = on;
+        btn._origHTML = btn._origHTML || btn.innerHTML;
+        btn.innerHTML = on
+            ? '<span class="spinner spinner-sm"></span>'
+            : btn._origHTML;
+    }
+
+    // ── Tabs ───────────────────────────────────────────────────
+    document.getElementById('statusTabs').addEventListener('click', (e) => {
+        const btn = e.target.closest('.stab');
+        if (!btn) return;
+
+        document.querySelectorAll('.stab').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        currentStatus = btn.dataset.status;
+        currentPage = 0;
+        loadApplications();
+    });
+
+    // ── LOAD DATA (FIX CHÍNH) ──────────────────────────────────
+    async function loadApplications() {
+        const tbody = document.getElementById('appsTableBody');
+        tbody.innerHTML = `<tr><td colspan="7" class="table-loading"><span class="spinner"></span></td></tr>`;
+
+        const search = document.getElementById('searchInput').value.trim();
+        const type   = document.getElementById('typeFilter').value;
+
+        let url = `/api/requests?page=${currentPage}&size=${PAGE_SIZE}`;
+        if (currentStatus) url += `&status=${currentStatus}`;
+        if (type)          url += `&requestType=${type}`;
+
+        try {
+            const res = await F3Api.get(url);
+
+            // 🔥 FIX QUAN TRỌNG: handle ApiResponse + Page
+            const pageData = res?.data ?? res;
+
+            const items = pageData?.content ?? [];
+            const total = pageData?.totalElements ?? items.length;
+
+            document.getElementById('tableInfo').textContent =
+                `Hiển thị ${items.length} / ${total} đơn`;
+
+            document.getElementById('lastUpdated').textContent =
+                'Cập nhật: ' + new Date().toLocaleTimeString('vi-VN');
+
+            // ── Search (FIX) ─────────────────────────────
+            const filtered = search
+                ? items.filter(a =>
+                    a.title?.toLowerCase().includes(search.toLowerCase()) ||
+                    String(a.studentId).includes(search)
+                )
+                : items;
+
+            if (!filtered.length) {
+                tbody.innerHTML = `<tr><td colspan="7">Không có dữ liệu</td></tr>`;
+                document.getElementById('pagination').innerHTML = '';
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(a => `
+            <tr>
+                <td>#${a.id}</td>
+                <td>HS-${a.studentId}</td>
+                <td>${REQUEST_TYPE_LABELS[a.requestType] || a.requestType}</td>
+                <td>${escHtml(a.title)}</td>
+                <td>
+                    <span class="chip ${STATUS_CHIP[a.status]}">
+                        ${STATUS_LABEL[a.status]}
+                    </span>
+                </td>
+                <td>${fmtDate(a.createdAt)}</td>
+                <td>
+                    <button onclick="viewApp(${a.id})">👁</button>
+                    ${a.status === 'PENDING' ? `
+                        <button onclick="quickReview(${a.id},'APPROVED')">✔</button>
+                        <button onclick="openReview(${a.id})">✖</button>
+                    ` : ''}
+                    <button onclick="deleteApp(${a.id}, ${a.studentId})">🗑</button>
+                </td>
+            </tr>
+        `).join('');
+
+            renderPagination(total);
+
+        } catch (e) {
+            tbody.innerHTML = `<tr><td colspan="7">Lỗi: ${escHtml(e.message)}</td></tr>`;
+            console.error(e);
+        }
+    }
+
+    // ── PAGINATION ────────────────────────────────────────────
+    function renderPagination(total) {
+        const pages = Math.ceil(total / PAGE_SIZE);
+        const pg = document.getElementById('pagination');
+
+        if (pages <= 1) {
+            pg.innerHTML = '';
+            return;
+        }
+
+        let html = '';
+
+        for (let i = 0; i < pages; i++) {
+            html += `
+            <button class="${i === currentPage ? 'active' : ''}"
+                    onclick="goPage(${i})">
+                ${i + 1}
+            </button>`;
+        }
+
+        pg.innerHTML = html;
+    }
+
+    function goPage(p) {
+        currentPage = p;
+        loadApplications();
+    }
+
+    // ── VIEW ──────────────────────────────────────────────────
+    async function viewApp(id) {
+        try {
+            const res = await F3Api.get(`/api/requests/${id}`);
+            const a   = res?.data ?? res;
+
+            alert(`Đơn #${a.id}\n${a.title}\n\n${a.description}`);
+        } catch (e) {
+            alert(e.message);
+        }
+    }
+
+    // ── REVIEW ────────────────────────────────────────────────
+    async function quickReview(id, status) {
+        try {
+            await F3Api.patch(`/api/requests/${id}/review`, {
+                status,
+                rejectedReason: null,
+                reviewedBy: window.F3_USER_ID
+            });
+
+            alert('Thành công');
+            loadApplications();
+
+        } catch (e) {
+            alert(e.message);
+        }
+    }
+
+    // ── DELETE (FIX QUAN TRỌNG) ───────────────────────────────
+    async function deleteApp(id, studentId) {
+        if (!confirm(`Xóa đơn #${id}?`)) return;
+
+        try {
+            // 🔥 FIX: thêm studentId
+            await F3Api.delete(`/api/requests/${id}?studentId=${studentId}`);
+
+            alert('Đã xóa');
+            loadApplications();
+
+        } catch (e) {
+            alert(e.message);
+        }
+    }
+
+    // ── SEARCH ────────────────────────────────────────────────
+    function debounceSearch() {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(loadApplications, 400);
+    }
+
+    // ── INIT ──────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', loadApplications);
+</script>
+</body>
+</html>

@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+    <meta charset="UTF-8" />
+    <title>Quản lý phúc khảo điểm</title>
+
+    <link rel="stylesheet" href="/static/css/theme.css" />
+    <link rel="stylesheet" href="/static/css/layout.css" />
+    <link rel="stylesheet" href="/static/css/components.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+
+    <style>
+        .status-chip {
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .st-pending  { background: var(--warn-soft);    color: var(--warn);    }
+        .st-approved { background: var(--success-soft); color: var(--success); }
+        .st-rejected { background: var(--danger-soft);  color: var(--danger);  }
+
+        .table-wrap {
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+        }
+        table { width: 100%; border-collapse: collapse; }
+        th, td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+        }
+        th {
+            background: var(--bg-elevated);
+            text-align: left;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+        tr:hover td { background: var(--bg-hover); }
+
+        /* Nhóm môn học nổi bật hơn */
+        .subject-cell { line-height: 1.5; }
+        .subject-cell .subject-name { font-weight: 600; font-size: 13px; }
+        .subject-cell .subject-meta { font-size: 11px; color: var(--text-muted); }
+
+        /* Modal từ chối */
+        .modal-overlay {
+            display: none;
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,.55);
+            z-index: 999;
+            align-items: center; justify-content: center;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-box {
+            background: var(--bg-card, #1e1e2e);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            width: 420px;
+            max-width: 95vw;
+        }
+        .modal-box h3 { margin: 0 0 16px; font-size: 16px; }
+        .modal-box textarea {
+            width: 100%; min-height: 90px;
+            padding: 8px; box-sizing: border-box;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md, 6px);
+            background: var(--bg-input, #2a2a3d);
+            color: inherit; font-size: 14px; resize: vertical;
+        }
+        .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; }
+    </style>
+</head>
+<body>
+
+<div class="main-wrapper">
+    <main class="page-content">
+
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">Phúc khảo điểm</h1>
+                <p class="page-subtitle">Quản lý yêu cầu chỉnh sửa điểm</p>
+            </div>
+            <span id="pendingBadge" style="display:none" class="status-chip st-pending"></span>
+        </div>
+
+        <!-- FILTER -->
+        <div class="card" style="margin-bottom:20px">
+            <div class="card-header">
+                <div class="card-title"><i class="bi bi-funnel"></i> Bộ lọc</div>
+            </div>
+            <div style="display:flex;gap:10px;padding:16px;flex-wrap:wrap">
+                <select id="statusFilter" class="form-control" style="width:180px" onchange="loadData(0)">
+                    <option value="">Tất cả trạng thái</option>
+                    <option value="PENDING">Đang chờ</option>
+                    <option value="APPROVED">Đã duyệt</option>
+                    <option value="REJECTED">Từ chối</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- TABLE -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title"><i class="bi bi-table"></i> Danh sách đơn</div>
+            </div>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Giáo viên</th>
+                        <th>Học sinh</th>
+                        <th>Môn học</th>          <!-- MỚI: subjectCode + subjectName -->
+                        <th>Đầu điểm</th>         <!-- MỚI: componentName -->
+                        <th>Lớp</th>              <!-- MỚI: className -->
+                        <th>Điểm cũ</th>
+                        <th>Điểm đề xuất</th>
+                        <th>Lý do</th>
+                        <th>Trạng thái</th>
+                        <th>Ngày gửi</th>
+                        <th>Hành động</th>
+                    </tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+
+            <div id="pagination" style="display:flex;gap:8px;padding:12px 16px;align-items:center">
+                <button class="btn btn-sm" onclick="prevPage()">← Trước</button>
+                <span id="pageInfo" style="font-size:13px"></span>
+                <button class="btn btn-sm" onclick="nextPage()">Sau →</button>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<!-- Modal nhập lý do từ chối -->
+<div class="modal-overlay" id="rejectModal">
+    <div class="modal-box">
+        <h3><i class="bi bi-x-circle"></i> Lý do từ chối</h3>
+        <textarea id="rejectNote" placeholder="Nhập lý do từ chối (bắt buộc)..."></textarea>
+        <div class="modal-actions">
+            <button class="btn" onclick="closeRejectModal()">Huỷ</button>
+            <button class="btn btn-danger" onclick="confirmReject()">Xác nhận từ chối</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentPage = 0;
+    const pageSize  = 15;
+    let totalPages  = 1;
+    let rejectingId = null;
+
+    // ── Load ────────────────────────────────────────────────
+    async function loadData(page = currentPage) {
+        const status = document.getElementById('statusFilter').value;
+        let url = `/api/grade-corrections?page=${page}&size=${pageSize}`;
+        if (status) url += `&status=${status}`;
+
+        const res  = await fetch(url);
+        const json = await res.json();
+
+        const pageData = json.data ?? json;
+        const list     = pageData.content ?? pageData;
+
+        totalPages  = pageData.totalPages ?? 1;
+        currentPage = pageData.number     ?? page;
+
+        renderTable(list);
+        renderPagination();
+        loadPendingCount();
+    }
+
+    function renderTable(list) {
+        const tb = document.getElementById('tableBody');
+        if (!list || !list.length) {
+            tb.innerHTML = `<tr><td colspan="12" style="text-align:center;padding:24px">
+                Không có dữ liệu</td></tr>`;
+            return;
+        }
+
+        tb.innerHTML = list.map(r => `
+            <tr>
+                <td>${r.id}</td>
+                <td>${r.teacherName ?? '-'}</td>
+                <td>${r.studentName ?? ('HS #' + r.studentProfileId)}</td>
+
+                <!-- Môn học: mã + tên gộp 2 dòng -->
+                <td class="subject-cell">
+                    <div class="subject-name">${r.subjectName ?? '-'}</div>
+                    <div class="subject-meta">${r.subjectCode ?? ''}</div>
+                </td>
+
+                <!-- Đầu điểm -->
+                <td>${r.componentName ?? ('#' + r.gradeComponentId)}</td>
+
+                <!-- Lớp -->
+                <td>${r.className ?? '-'}</td>
+
+                <td>${r.oldScore ?? '-'}</td>
+                <td><strong>${r.proposedScore ?? '-'}</strong></td>
+                <td title="${r.reason ?? ''}">${truncate(r.reason, 35)}</td>
+                <td>${renderStatus(r.status)}</td>
+                <td style="white-space:nowrap">${formatDate(r.createdAt)}</td>
+                <td style="white-space:nowrap">
+                    ${r.status === 'PENDING' ? `
+                        <button class="btn btn-primary btn-sm" onclick="approve(${r.id})">
+                            <i class="bi bi-check-lg"></i> Duyệt
+                        </button>
+                        <button class="btn btn-danger btn-sm" onclick="openRejectModal(${r.id})">
+                            <i class="bi bi-x-lg"></i> Từ chối
+                        </button>
+                    ` : `
+                        <span style="font-size:11px;color:var(--text-muted)">
+                            ${r.reviewedAt ? formatDate(r.reviewedAt) : ''}
+                            ${r.reviewNote ? `<br><i title="${r.reviewNote}">${truncate(r.reviewNote, 30)}</i>` : ''}
+                        </span>
+                    `}
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function renderStatus(st) {
+        const map = {
+            PENDING:  '<span class="status-chip st-pending">Đang chờ</span>',
+            APPROVED: '<span class="status-chip st-approved">Đã duyệt</span>',
+            REJECTED: '<span class="status-chip st-rejected">Từ chối</span>',
+        };
+        return map[st] ?? st;
+    }
+
+    function renderPagination() {
+        document.getElementById('pageInfo').textContent =
+            `Trang ${currentPage + 1} / ${totalPages}`;
+    }
+
+    function prevPage() { if (currentPage > 0) loadData(currentPage - 1); }
+    function nextPage() { if (currentPage < totalPages - 1) loadData(currentPage + 1); }
+
+    // ── Approve ─────────────────────────────────────────────
+    async function approve(id) {
+        if (!confirm('Duyệt đơn sửa điểm này?')) return;
+        const res = await fetch(`/api/grade-corrections/${id}/approve`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reviewedBy: getCurrentUserId() })
+        });
+        if (res.ok) { showToast('Đã duyệt đơn thành công!', 'success'); loadData(); }
+        else { const e = await res.json().catch(() => ({})); showToast(e.message ?? 'Lỗi khi duyệt', 'error'); }
+    }
+
+    // ── Reject ──────────────────────────────────────────────
+    function openRejectModal(id) {
+        rejectingId = id;
+        document.getElementById('rejectNote').value = '';
+        document.getElementById('rejectModal').classList.add('active');
+    }
+    function closeRejectModal() {
+        rejectingId = null;
+        document.getElementById('rejectModal').classList.remove('active');
+    }
+    async function confirmReject() {
+        const note = document.getElementById('rejectNote').value.trim();
+        if (!note) { alert('Vui lòng nhập lý do từ chối.'); return; }
+        const res = await fetch(`/api/grade-corrections/${rejectingId}/reject`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reviewedBy: getCurrentUserId(), reviewNote: note })
+        });
+        closeRejectModal();
+        if (res.ok) { showToast('Đã từ chối đơn.', 'success'); loadData(); }
+        else { const e = await res.json().catch(() => ({})); showToast(e.message ?? 'Lỗi khi từ chối', 'error'); }
+    }
+
+    // ── Pending badge ────────────────────────────────────────
+    async function loadPendingCount() {
+        try {
+            const res   = await fetch('/api/grade-corrections/pending-count');
+            const json  = await res.json();
+            const count = (json.data ?? json).count ?? 0;
+            const badge = document.getElementById('pendingBadge');
+            if (count > 0) { badge.textContent = count + ' đang chờ'; badge.style.display = 'inline-block'; }
+            else { badge.style.display = 'none'; }
+        } catch (_) {}
+    }
+
+    // ── Utils ────────────────────────────────────────────────
+    function truncate(str, len) {
+        if (!str) return '-';
+        return str.length > len ? str.slice(0, len) + '…' : str;
+    }
+    function formatDate(iso) {
+        if (!iso) return '-';
+        return new Date(iso).toLocaleString('vi-VN', {
+            day: '2-digit', month: '2-digit', year: 'numeric',
+            hour: '2-digit', minute: '2-digit'
+        });
+    }
+    function getCurrentUserId() { return 1; } // TODO: lấy từ session/JWT thực tế
+    function showToast(msg, type = 'info') {
+        alert((type === 'error' ? '❌ ' : '✅ ') + msg);
+    }
+
+    loadData();
+</script>
+</body>
+</html>

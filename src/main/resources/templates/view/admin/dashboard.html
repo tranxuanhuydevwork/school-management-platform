@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+    <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard — MyF3School Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,400&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="/static/css/theme.css" />
+    <link rel="stylesheet" href="/static/css/layout.css" />
+    <link rel="stylesheet" href="/static/css/components.css" />
+    <style>
+        .quick-action-btn {
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            gap: var(--space-2); padding: var(--space-4);
+            background: var(--bg-elevated); border: 1px solid var(--border);
+            border-radius: var(--radius-lg); color: var(--text-secondary);
+            font-size: .8rem; font-weight: 600; cursor: pointer;
+            transition: all var(--t-fast); text-decoration: none;
+        }
+        .quick-action-btn i { font-size: 1.3rem; color: var(--accent); }
+        .quick-action-btn:hover { background: var(--bg-hover); border-color: var(--accent); color: var(--text-primary); transform: translateY(-2px); }
+        @media (max-width: 1024px) { .dashboard-grid { grid-template-columns: 1fr !important; } }
+
+        /* ── Chat Floating Button ── */
+        #chatFab {
+            position: fixed; bottom: 28px; right: 28px; z-index: 900;
+            width: 56px; height: 56px; border-radius: 50%;
+            background: var(--accent); color: #fff; border: none; cursor: pointer;
+            box-shadow: 0 4px 20px rgba(99,102,241,.45);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.4rem; transition: transform .2s, box-shadow .2s;
+        }
+        #chatFab:hover { transform: scale(1.1); box-shadow: 0 6px 28px rgba(99,102,241,.55); }
+        #chatFab .chat-badge {
+            position: absolute; top: -4px; right: -4px;
+            background: #ef4444; color: #fff; font-size: 10px; font-weight: 700;
+            width: 18px; height: 18px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            border: 2px solid var(--bg-base);
+        }
+
+        /* ── Chat Panel ── */
+        #chatPanel {
+            position: fixed; bottom: 96px; right: 28px; z-index: 901;
+            width: 380px; max-height: 560px;
+            background: var(--bg-elevated); border: 1px solid var(--border);
+            border-radius: 20px; display: flex; flex-direction: column;
+            box-shadow: 0 12px 48px rgba(0,0,0,.22);
+            transform: scale(.9) translateY(20px); opacity: 0;
+            pointer-events: none; transition: all .25s cubic-bezier(.4,0,.2,1);
+            overflow: hidden;
+        }
+        #chatPanel.open { transform: scale(1) translateY(0); opacity: 1; pointer-events: all; }
+
+        .chat-panel-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 16px; border-bottom: 1px solid var(--border);
+            background: var(--bg-elevated);
+        }
+        .chat-panel-header h3 { margin: 0; font-size: .9rem; font-weight: 700; }
+        .chat-panel-header .chat-conn-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: #6b7280; display: inline-block; margin-right: 6px;
+            transition: background .3s;
+        }
+        .chat-panel-header .chat-conn-dot.live { background: #10b981; }
+
+        /* Tabs: contacts / messages */
+        .chat-tabs { display: flex; border-bottom: 1px solid var(--border); background: var(--bg-base); }
+        .chat-tab {
+            flex: 1; padding: 9px; text-align: center; font-size: .78rem;
+            font-weight: 600; cursor: pointer; color: var(--text-muted);
+            border-bottom: 2px solid transparent; transition: all .15s;
+        }
+        .chat-tab.active { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+
+        /* Contact list */
+        #chatContactList { flex: 1; overflow-y: auto; }
+        .chat-contact {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 14px; cursor: pointer;
+            border-bottom: 1px solid var(--border);
+            transition: background .12s;
+        }
+        .chat-contact:hover { background: var(--bg-hover); }
+        .chat-contact .c-avatar {
+            width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+            background: var(--accent-soft); color: var(--accent);
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: .85rem; position: relative;
+        }
+        .chat-contact .c-badge {
+            position: absolute; top: -3px; right: -3px;
+            background: #ef4444; color: #fff;
+            font-size: 9px; font-weight: 700;
+            width: 15px; height: 15px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .chat-contact .c-info { flex: 1; min-width: 0; }
+        .chat-contact .c-name { font-size: .82rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .chat-contact .c-last { font-size: .72rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .chat-contact .c-time { font-size: .68rem; color: var(--text-muted); flex-shrink: 0; }
+        .chat-contact .c-role-tag {
+            font-size: .62rem; font-weight: 700; padding: 1px 5px;
+            border-radius: 4px; background: var(--accent-soft); color: var(--accent);
+        }
+        .chat-contact .c-role-tag.admin { background: rgba(139,92,246,.15); color: #8b5cf6; }
+        .chat-contact .c-role-tag.teacher { background: rgba(16,185,129,.15); color: #10b981; }
+
+        /* Message view */
+        #chatMsgView { display: none; flex-direction: column; height: 100%; }
+        #chatMsgView.active { display: flex; }
+        .chat-msg-header {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 14px; border-bottom: 1px solid var(--border);
+            background: var(--bg-base);
+        }
+        .chat-back-btn { background: none; border: none; cursor: pointer; color: var(--text-secondary); font-size: 1rem; padding: 2px 6px; }
+        .chat-msg-header .c-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: .78rem; flex-shrink: 0; }
+        .chat-msg-header .c-hinfo { flex: 1; min-width: 0; }
+        .chat-msg-header .c-hname { font-size: .82rem; font-weight: 600; }
+        .chat-msg-header .c-hrole { font-size: .68rem; color: var(--text-muted); }
+
+        #chatMessages {
+            flex: 1; overflow-y: auto; padding: 12px 14px;
+            display: flex; flex-direction: column; gap: 6px;
+        }
+        .msg-bubble-wrap { display: flex; flex-direction: column; }
+        .msg-bubble-wrap.me { align-items: flex-end; }
+        .msg-bubble-wrap.them { align-items: flex-start; }
+        .msg-sender-name { font-size: .68rem; color: var(--text-muted); margin-bottom: 2px; padding: 0 6px; }
+        .msg-bubble {
+            max-width: 82%; padding: 8px 13px; border-radius: 18px;
+            font-size: .82rem; line-height: 1.45; word-break: break-word;
+        }
+        .msg-bubble-wrap.me .msg-bubble {
+            background: var(--accent); color: #fff;
+            border-bottom-right-radius: 4px;
+        }
+        .msg-bubble-wrap.them .msg-bubble {
+            background: var(--bg-base); border: 1px solid var(--border);
+            color: var(--text-primary); border-bottom-left-radius: 4px;
+        }
+        .msg-time { font-size: .65rem; color: var(--text-muted); margin-top: 2px; padding: 0 4px; }
+        .msg-date-sep {
+            text-align: center; font-size: .68rem; color: var(--text-muted);
+            padding: 6px 0; display: flex; align-items: center; gap: 8px;
+        }
+        .msg-date-sep::before, .msg-date-sep::after { content:''; flex:1; height:1px; background: var(--border); }
+
+        .chat-input-bar {
+            display: flex; align-items: flex-end; gap: 8px;
+            padding: 10px 14px; border-top: 1px solid var(--border);
+            background: var(--bg-elevated);
+        }
+        #chatInput {
+            flex: 1; resize: none; border: 1px solid var(--border);
+            background: var(--bg-base); color: var(--text-primary);
+            border-radius: 18px; padding: 8px 14px; font-size: .82rem;
+            max-height: 90px; outline: none; font-family: inherit;
+            transition: border-color .15s;
+        }
+        #chatInput:focus { border-color: var(--accent); }
+        #chatSendBtn {
+            width: 36px; height: 36px; border-radius: 50%;
+            background: var(--accent); color: #fff; border: none; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0; transition: transform .15s, opacity .15s;
+            font-size: .9rem;
+        }
+        #chatSendBtn:hover { transform: scale(1.08); }
+        #chatSendBtn:disabled { opacity: .5; }
+        .chat-typing { font-size: .7rem; color: var(--text-muted); padding: 0 14px 6px; }
+
+        /* Search contacts */
+        .chat-search {
+            padding: 8px 12px; border-bottom: 1px solid var(--border);
+        }
+        .chat-search input {
+            width: 100%; border: 1px solid var(--border); background: var(--bg-base);
+            color: var(--text-primary); border-radius: 10px;
+            padding: 6px 12px; font-size: .78rem; outline: none;
+        }
+        .chat-empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-muted); gap: 6px; font-size: .8rem; }
+        .chat-empty-state i { font-size: 2rem; opacity: .4; }
+    </style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <div class="logo"><div class="logo-mark"><span>F3</span></div><div class="logo-text"><strong>MyF3School</strong><small>Admin Portal</small></div></div>
+        <button class="sidebar-toggle" id="sidebarToggle"><i class="bi bi-layout-sidebar-reverse"></i></button>
+    </div>
+    <nav class="sidebar-nav">
+        <div class="nav-group"><span class="nav-label">Tổng quan</span>
+            <a href="/admin/dashboard" class="nav-item active"><i class="bi bi-grid-1x2"></i><span>Dashboard</span></a></div>
+        <div class="nav-group"><span class="nav-label">Học tập</span>
+            <a href="/admin/courses"    class="nav-item"><i class="bi bi-journal-bookmark"></i><span>Môn học &amp; Lớp</span></a>
+            <a href="/admin/grades"     class="nav-item"><i class="bi bi-bar-chart-steps"></i><span>Điểm số</span></a>
+            <a href="/admin/attendance" class="nav-item"><i class="bi bi-person-check"></i><span>Điểm danh</span></a></div>
+        <div class="nav-group"><span class="nav-label">Quản lý</span>
+            <a href="/admin/accounts"     class="nav-item"><i class="bi bi-people"></i><span>Tài khoản</span></a>
+            <a href="/admin/applications" class="nav-item"><i class="bi bi-file-earmark-text"></i><span>Đơn từ</span><span class="badge badge-warn" id="sidebarAppBadge" style="display:none"></span></a>
+            <a href="/admin/clubs"        class="nav-item"><i class="bi bi-collection"></i><span>Câu lạc bộ</span></a></div>
+        <div class="nav-group"><span class="nav-label">Hệ thống</span>
+            <a href="/admin/notifications" class="nav-item"><i class="bi bi-bell"></i><span>Thông báo</span><span class="badge badge-accent" id="sidebarNotifBadge" style="display:none"></span></a>
+            <a href="/admin/settings"      class="nav-item"><i class="bi bi-sliders"></i><span>Cài đặt</span></a></div>
+    </nav>
+    <div class="sidebar-footer">
+        <div class="user-chip"><div class="user-avatar" id="sidebarAvatar">A</div>
+            <div class="user-info"><span class="user-name" id="sidebarUserName">Admin</span><span class="user-role">Administrator</span></div></div>
+        <a href="/auth/logout" class="logout-btn"><i class="bi bi-box-arrow-right"></i></a>
+    </div>
+</aside>
+
+<div class="main-wrapper" id="mainWrapper">
+    <header class="topbar">
+        <div class="topbar-left">
+            <button class="topbar-btn topbar-toggle-mobile" id="mobileSidebarToggle"><i class="bi bi-list"></i></button>
+            <div class="breadcrumb-trail">Dashboard</div>
+        </div>
+        <div class="topbar-right">
+            <div class="live-clock" id="liveClock"></div>
+            <div class="rt-indicator" id="rtIndicator"><span class="rt-dot"></span><span class="rt-label">Live</span></div>
+            <button class="topbar-btn notif-btn" id="topbarNotifBtn"><i class="bi bi-bell"></i><span class="notif-count" id="topbarNotifCount" style="display:none">0</span></button>
+            <div class="notif-dropdown" id="notifDropdown">
+                <div class="notif-header"><span>Thông báo</span><button class="mark-all-read" id="markAllReadBtn">Đọc tất cả</button></div>
+                <div class="notif-list" id="notifList"><div class="notif-empty">Không có thông báo mới</div></div>
+            </div>
+            <button class="topbar-btn" id="themeToggle"><i class="bi bi-moon-stars"></i></button>
+        </div>
+    </header>
+
+    <main class="page-content">
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">Dashboard</h1>
+                <p class="page-subtitle" id="dateDisplay"></p>
+            </div>
+            <div class="page-actions">
+                <button class="btn btn-secondary btn-sm" onclick="refreshDashboard()"><i class="bi bi-arrow-clockwise"></i> Làm mới</button>
+                <button class="btn btn-primary btn-sm" data-modal-open="sendNotifModal"><i class="bi bi-send"></i> Gửi thông báo</button>
+            </div>
+        </div>
+
+        <!-- Stat Cards -->
+        <div class="stat-grid" id="statGrid">
+            <div class="stat-card">
+                <div class="stat-icon"><i class="bi bi-people"></i></div>
+                <div class="stat-body"><div class="stat-label">Học sinh</div><div class="stat-value" id="statStudents">—</div><div class="stat-delta up"><i class="bi bi-arrow-up-short"></i> <span id="statStudentsDelta">—</span></div></div>
+            </div>
+            <div class="stat-card green">
+                <div class="stat-icon"><i class="bi bi-person-check"></i></div>
+                <div class="stat-body"><div class="stat-label">Điểm danh hôm nay</div><div class="stat-value" id="statAttendance">—</div><div class="stat-delta"><span id="statAttendanceRate">—</span></div></div>
+            </div>
+            <div class="stat-card orange">
+                <div class="stat-icon"><i class="bi bi-file-earmark-text"></i></div>
+                <div class="stat-body"><div class="stat-label">Đơn chờ duyệt</div><div class="stat-value" id="statPending">—</div><div class="stat-delta"><span>cần xử lý</span></div></div>
+            </div>
+            <div class="stat-card blue">
+                <div class="stat-icon"><i class="bi bi-journal-bookmark"></i></div>
+                <div class="stat-body"><div class="stat-label">Lớp đang hoạt động</div><div class="stat-value" id="statClasses">—</div><div class="stat-delta"><span>học kỳ này</span></div></div>
+            </div>
+        </div>
+
+        <!-- Two-column grid -->
+        <div style="display:grid;grid-template-columns:1fr 360px;gap:var(--space-5);align-items:start" class="dashboard-grid">
+
+            <!-- Pending Applications -->
+            <div class="card">
+                <div class="card-header">
+                    <div><div class="card-title">Đơn từ chờ duyệt</div><div class="card-subtitle">Cập nhật theo thời gian thực</div></div>
+                    <a href="/admin/applications" class="btn btn-ghost btn-sm">Xem tất cả <i class="bi bi-arrow-right"></i></a>
+                </div>
+                <div class="table-wrapper">
+                    <table class="table">
+                        <thead><tr><th>Học sinh</th><th>Loại đơn</th><th>Tiêu đề</th><th>Ngày tạo</th><th>Hành động</th></tr></thead>
+                        <tbody id="pendingAppsBody"><tr><td colspan="5" class="table-loading"><span class="spinner"></span></td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Right column -->
+            <div style="display:flex;flex-direction:column;gap:var(--space-5)">
+                <!-- Recent Notifications -->
+                <div class="card">
+                    <div class="card-header"><div class="card-title">Thông báo gần đây</div><button class="btn btn-ghost btn-sm" onclick="F3RT.fetchNotifications()"><i class="bi bi-arrow-clockwise"></i></button></div>
+                    <div id="dashNotifList">
+                        <div class="empty-state" style="padding:var(--space-6)"><div class="empty-state-icon"><i class="bi bi-bell-slash"></i></div><div class="empty-state-desc">Chưa có thông báo</div></div>
+                    </div>
+                </div>
+                <!-- Quick Actions -->
+                <div class="card">
+                    <div class="card-header"><div class="card-title">Thao tác nhanh</div></div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3)">
+                        <a href="/admin/grades"          class="quick-action-btn"><i class="bi bi-pencil-square"></i><span>Nhập điểm</span></a>
+                        <a href="/admin/attendance"       class="quick-action-btn"><i class="bi bi-clipboard-check"></i><span>Điểm danh</span></a>
+                        <a href="/admin/accounts?tab=students" class="quick-action-btn"><i class="bi bi-person-plus"></i><span>Thêm HS</span></a>
+                        <button class="quick-action-btn" data-modal-open="sendNotifModal"><i class="bi bi-megaphone"></i><span>Thông báo</span></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ═══ CHAT FLOATING BUTTON ═══ -->
+<button id="chatFab" onclick="ChatUI.toggle()" title="Tin nhắn">
+    <i class="bi bi-chat-dots-fill"></i>
+    <span class="chat-badge" id="chatFabBadge" style="display:none">0</span>
+</button>
+
+<!-- ═══ CHAT PANEL ═══ -->
+<div id="chatPanel">
+    <div class="chat-panel-header">
+        <div style="display:flex;align-items:center;gap:8px">
+            <span class="chat-conn-dot" id="chatConnDot"></span>
+            <h3>Tin nhắn</h3>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+            <button class="topbar-btn" onclick="ChatUI.refreshContacts()" style="width:28px;height:28px;font-size:.85rem" title="Làm mới"><i class="bi bi-arrow-clockwise"></i></button>
+            <button class="topbar-btn" onclick="ChatUI.toggle()" style="width:28px;height:28px;font-size:.9rem"><i class="bi bi-x"></i></button>
+        </div>
+    </div>
+    <!-- Contact List -->
+    <div id="chatContactView" style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+        <div class="chat-search">
+            <input type="text" id="chatSearchInput" placeholder="Tìm học sinh, giáo viên..." oninput="ChatUI.filterContacts(this.value)" />
+        </div>
+        <div id="chatContactList" style="flex:1;overflow-y:auto">
+            <div class="chat-empty-state" style="padding:40px 0"><span class="spinner"></span><span>Đang tải...</span></div>
+        </div>
+    </div>
+    <!-- Message View -->
+    <div id="chatMsgView">
+        <div class="chat-msg-header">
+            <button class="chat-back-btn" onclick="ChatUI.backToList()"><i class="bi bi-arrow-left"></i></button>
+            <div class="c-avatar" id="chatPartnerAvatar">?</div>
+            <div class="c-hinfo">
+                <div class="c-hname" id="chatPartnerName">—</div>
+                <div class="c-hrole" id="chatPartnerRole">—</div>
+            </div>
+            <span class="chat-conn-dot" id="chatConnDot2" style="margin-left:auto"></span>
+        </div>
+        <div id="chatMessages"></div>
+        <div class="chat-typing" id="chatTypingIndicator" style="display:none"><span id="chatTypingText"></span> đang nhập...</div>
+        <div class="chat-input-bar">
+            <textarea id="chatInput" rows="1" placeholder="Nhập tin nhắn..." onkeydown="ChatUI.onKey(event)"></textarea>
+            <button id="chatSendBtn" onclick="ChatUI.send()"><i class="bi bi-send-fill"></i></button>
+        </div>
+    </div>
+</div>
+
+<!-- Send Notification Modal -->
+<div class="modal-overlay" id="sendNotifModal">
+    <div class="modal">
+        <div class="modal-header"><span class="modal-title">Gửi thông báo</span><button class="modal-close" data-modal-close="sendNotifModal"><i class="bi bi-x"></i></button></div>
+        <div class="modal-body">
+            <div class="form-group"><label class="form-label">User ID <span class="required">*</span></label><input type="number" class="form-control" id="notifUserId" placeholder="Nhập user ID"/></div>
+            <div class="form-group"><label class="form-label">Tiêu đề <span class="required">*</span></label><input type="text" class="form-control" id="notifTitle" placeholder="VD: Thông báo điểm thi"/></div>
+            <div class="form-group"><label class="form-label">Nội dung <span class="required">*</span></label><textarea class="form-control" id="notifMessage" placeholder="Nội dung thông báo..."></textarea></div>
+            <div class="form-grid">
+                <div class="form-group"><label class="form-label">Loại tham chiếu</label>
+                    <select class="form-control" id="notifRefType">
+                        <option value="">Không có</option><option value="SCHEDULE">Lịch học</option>
+                        <option value="SCORE">Điểm số</option><option value="ATTENDANCE">Điểm danh</option>
+                        <option value="ENROLLMENT">Ghi danh</option><option value="APPLICATION">Đơn từ</option>
+                    </select></div>
+                <div class="form-group"><label class="form-label">ID tham chiếu</label><input type="number" class="form-control" id="notifRefId" placeholder="Tuỳ chọn"/></div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" data-modal-close="sendNotifModal">Hủy</button>
+            <button class="btn btn-primary" id="sendNotifBtn" onclick="sendNotification()"><i class="bi bi-send"></i> Gửi</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    window.F3_USER_ID  = /*[[${userId}]]*/ 1;
+    window.F3_API_BASE = /*[[${apiBase}]]*/ '/api';
+</script>
+<script src="/static/js/theme.js"></script>
+<script src="/static/js/realtime.js"></script>
+<script src="/static/js/layout.js"></script>
+<script>
+    document.getElementById('dateDisplay').textContent =
+        new Date().toLocaleDateString('vi-VN', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+
+    const REQUEST_TYPE_LABELS = { LEAVE_REQUEST:'Xin nghỉ', COURSE_REGISTRATION:'Ghi danh', TRANSFER_REQUEST:'Chuyển lớp', GRADE_APPEAL:'Phúc khảo' };
+
+    async function loadPendingApps() {
+        const tbody = document.getElementById('pendingAppsBody');
+        try {
+            const data = await F3Api.get('/requests?status=PENDING&size=8');
+            const apps = data?.data?.content || data?.data || [];
+            document.getElementById('statPending').textContent = apps.length;
+            const sb = document.getElementById('sidebarAppBadge');
+            if (sb) { sb.textContent = apps.length; sb.style.display = apps.length ? '' : 'none'; }
+            if (!apps.length) {
+                tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="empty-state-icon"><i class="bi bi-check2-all"></i></div><div class="empty-state-title">Không có đơn chờ duyệt</div></div></td></tr>`;
+                return;
+            }
+            tbody.innerHTML = apps.map(a => `
+                <tr>
+                    <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar avatar-sm">${String(a.studentId||'?').slice(-1)}</div><span>HS-${a.studentId}</span></div></td>
+                    <td><span class="chip chip-accent">${REQUEST_TYPE_LABELS[a.requestType]||a.requestType}</span></td>
+                    <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(a.title)}</td>
+                    <td>${fmtDate(a.createdAt)}</td>
+                    <td>
+                        <button class="btn btn-success btn-sm" onclick="reviewApp(${a.id},'APPROVED')"><i class="bi bi-check"></i></button>
+                        <button class="btn btn-danger  btn-sm" style="margin-left:4px" onclick="reviewApp(${a.id},'REJECTED')"><i class="bi bi-x"></i></button>
+                    </td>
+                </tr>`).join('');
+        } catch (e) {
+            tbody.innerHTML = `<tr><td colspan="5" class="table-empty">Không thể tải dữ liệu</td></tr>`;
+        }
+    }
+
+    async function reviewApp(id, status) {
+        const label = status === 'APPROVED' ? 'duyệt' : 'từ chối';
+        F3Confirm(`Bạn có chắc muốn ${label} đơn #${id}?`, async () => {
+            try {
+                await F3Api.patch(`/requests/${id}/review`, { status });
+                F3Toast.success('Thành công', `Đã ${label} đơn #${id}`);
+                loadPendingApps();
+            } catch (e) { F3Toast.danger('Lỗi', e.message); }
+        }, { okLabel: label, okClass: status === 'APPROVED' ? 'btn-success' : 'btn-danger' });
+    }
+
+    async function loadDashNotifs() {
+        const uid = window.F3_USER_ID; if (!uid) return;
+        try {
+            const data  = await F3Api.get(`/notifications/users/${uid}?page=0&size=5`);
+            const items = data?.data?.content || data?.data || [];
+            const el = document.getElementById('dashNotifList');
+            if (!items.length) return;
+            el.innerHTML = items.map(n => `
+                <div style="display:flex;gap:10px;padding:10px;border-radius:var(--radius-md);background:${n.isRead?'':'var(--accent-soft)'};margin-bottom:4px">
+                    <div class="avatar avatar-sm" style="background:var(--info-soft);color:var(--info)"><i class="bi bi-bell" style="font-size:.65rem"></i></div>
+                    <div style="flex:1;min-width:0">
+                        <div style="font-size:.8rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(n.title)}</div>
+                        <div style="font-size:.72rem;color:var(--text-muted);margin-top:2px">${relTime(n.createdAt)}</div>
+                    </div>
+                    ${!n.isRead ? '<div style="width:6px;height:6px;background:var(--accent);border-radius:50%;margin-top:6px;flex-shrink:0"></div>' : ''}
+                </div>`).join('');
+        } catch (_) {}
+    }
+
+    async function sendNotification() {
+        const btn     = document.getElementById('sendNotifBtn');
+        const userId  = document.getElementById('notifUserId').value;
+        const title   = document.getElementById('notifTitle').value.trim();
+        const message = document.getElementById('notifMessage').value.trim();
+        const refType = document.getElementById('notifRefType').value;
+        const refId   = document.getElementById('notifRefId').value;
+        if (!userId || !title || !message) { F3Toast.warn('Thiếu thông tin', 'Vui lòng điền đủ các trường bắt buộc'); return; }
+        F3Loading(btn, true);
+        try {
+            await F3Api.post('/notifications', { userId:+userId, title, message, refType:refType||null, refId:refId?+refId:null });
+            F3Toast.success('Đã gửi', `Thông báo gửi đến user #${userId}`);
+            F3Modal.close('sendNotifModal');
+            ['notifUserId','notifTitle','notifMessage','notifRefId'].forEach(id => document.getElementById(id).value = '');
+        } catch (e) { F3Toast.danger('Lỗi', e.message); }
+        finally { F3Loading(btn, false); }
+    }
+
+    function refreshDashboard() {
+        loadPendingApps(); loadDashNotifs(); F3RT.fetchNotifications();
+        F3Toast.info('Đã làm mới', 'Dữ liệu được cập nhật');
+    }
+
+    window.addEventListener('f3:notification', () => { loadDashNotifs(); loadPendingApps(); });
+
+    document.addEventListener('DOMContentLoaded', () => { loadPendingApps(); loadDashNotifs(); });
+</script>
+
+<!-- SockJS + STOMP for realtime chat -->
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7/bundles/stomp.umd.min.js"></script>
+<script>
+    // ====================================================================
+    //  F3 CHAT — Admin Dashboard Realtime Chat (WebSocket/STOMP)
+    //  Endpoint WS: /ws-chat (SockJS)  |  Send: /app/chat.send
+    //  Receive: /user/{id}/queue/messages
+    // ====================================================================
+
+    const ChatState = {
+        stompClient: null, connected: false,
+        contacts: [], currentPartner: null,
+        messages: {}, unread: {},
+        myId: window.F3_USER_ID || 1,
+        myName: document.getElementById("sidebarUserName")?.textContent || "Admin",
+        myRole: "ADMIN",
+        apiBase: window.F3_API_BASE || "/api",
+    };
+
+    function chatEsc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+    function chatFmtTime(iso){
+        const d=new Date(iso), now=new Date();
+        if(now-d<86400000 && now.getDate()===d.getDate()) return d.toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit"});
+        if(now-d<604800000) return d.toLocaleDateString("vi-VN",{weekday:"short"})+" "+d.toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit"});
+        return d.toLocaleDateString("vi-VN",{day:"2-digit",month:"2-digit"});
+    }
+    function chatDateLabel(iso){
+        const d=new Date(iso), now=new Date();
+        const diff=Math.floor((now-d)/86400000);
+        if(diff===0) return "Hôm nay"; if(diff===1) return "Hôm qua";
+        return d.toLocaleDateString("vi-VN");
+    }
+    function chatRoleLabel(r){ return {ADMIN:"Quản trị viên",TEACHER:"Giáo viên",STUDENT:"Học sinh"}[r]||r; }
+    function getToken(){
+        const m=document.cookie.match(/(?:^|;\s*)F3_TOKEN=([^;]+)/);
+        return m?decodeURIComponent(m[1]):(localStorage.getItem("f3_token")||"");
+    }
+
+    const ChatWS = {
+        connect(){
+            const wsBase=(ChatState.apiBase||"/api").replace("/api","");
+            const token=getToken();
+            const client=new StompJs.Client({
+                webSocketFactory:()=>new SockJS(wsBase+"/ws-chat"),
+                connectHeaders:{Authorization:"Bearer "+token},
+                reconnectDelay:5000,
+                onConnect:()=>{
+                    ChatState.connected=true; ChatUI.setConnDot(true);
+                    client.subscribe("/user/"+ChatState.myId+"/queue/messages", frame=>{
+                        ChatWS.onMessage(JSON.parse(frame.body));
+                    });
+                },
+                onDisconnect:()=>{ ChatState.connected=false; ChatUI.setConnDot(false); },
+                onStompError:f=>console.warn("[STOMP]",f.body),
+            });
+            client.activate(); ChatState.stompClient=client;
+        },
+        send(partnerId, content){
+            if(!ChatState.connected){ F3Toast.warn("Chat","Chưa kết nối — đang thử lại..."); ChatWS.connect(); return null; }
+            const msg={ senderId:ChatState.myId, senderName:ChatState.myName, senderRole:ChatState.myRole,
+                receiverId:partnerId, content, timestamp:new Date().toISOString() };
+            ChatState.stompClient.publish({ destination:"/app/chat.send", body:JSON.stringify(msg),
+                headers:{Authorization:"Bearer "+getToken()} });
+            return msg;
+        },
+        onMessage(msg){
+            const pid=msg.senderId===ChatState.myId?msg.receiverId:msg.senderId;
+            if(!ChatState.messages[pid]) ChatState.messages[pid]=[];
+            ChatState.messages[pid].push(msg);
+            if(ChatState.currentPartner?.userId===pid){
+                ChatUI.appendBubble(msg, msg.senderId===ChatState.myId); ChatUI.scrollMessages();
+            } else {
+                ChatState.unread[pid]=(ChatState.unread[pid]||0)+1;
+                ChatUI.updateUnread();
+                const c=ChatState.contacts.find(x=>x.userId===pid);
+                if(c){ c.lastMessage=msg.content; c.lastTime=msg.timestamp; }
+            }
+        },
+    };
+
+    async function chatApiGet(path){
+        const h={"Content-Type":"application/json"}, t=getToken();
+        if(t) h["Authorization"]="Bearer "+t;
+        const r=await fetch(ChatState.apiBase+path,{headers:h});
+        if(!r.ok) throw new Error("HTTP "+r.status);
+        return r.json();
+    }
+
+    const ChatUI = {
+        open:false,
+        toggle(){
+            this.open=!this.open;
+            document.getElementById("chatPanel").classList.toggle("open",this.open);
+            if(this.open && ChatState.contacts.length===0) this.refreshContacts();
+        },
+        setConnDot(live){
+            ["chatConnDot","chatConnDot2"].forEach(id=>{
+                const el=document.getElementById(id); if(el) el.classList.toggle("live",live);
+            });
+        },
+        async refreshContacts(){
+            const list=document.getElementById("chatContactList");
+            list.innerHTML=`<div class="chat-empty-state" style="padding:40px 0"><span class="spinner"></span><span>Đang tải...</span></div>`;
+            try{
+                let res=await chatApiGet("/chat/contacts/"+ChatState.myId);
+                ChatState.contacts=res.data||[];
+            } catch(_){
+                try{
+                    let res2=await chatApiGet("/users?size=30&roles=STUDENT,TEACHER");
+                    const users=res2.data?.content||res2.data||[];
+                    ChatState.contacts=users.filter(u=>u.id!==ChatState.myId).map(u=>({
+                        userId:u.id, name:u.fullName||u.username,
+                        role:(u.roles?.[0]||"STUDENT").toUpperCase(),
+                        lastMessage:null, lastTime:null, unread:0,
+                    }));
+                } catch(e2){ list.innerHTML=`<div class="chat-empty-state" style="padding:40px 0"><i class="bi bi-wifi-off"></i><span>Không thể tải</span></div>`; return; }
+            }
+            this.renderContactList(ChatState.contacts);
+        },
+        renderContactList(contacts){
+            const list=document.getElementById("chatContactList");
+            if(!contacts.length){ list.innerHTML=`<div class="chat-empty-state" style="padding:40px 0"><i class="bi bi-people"></i><span>Không có người dùng</span></div>`; return; }
+            list.innerHTML=contacts.map(c=>this._contactHTML(c)).join("");
+        },
+        _contactHTML(c){
+            const initials=(c.name||"?")[0].toUpperCase();
+            const role=(c.role||"STUDENT").toUpperCase();
+            const rtag=role==="ADMIN"?"admin":role==="TEACHER"?"teacher":"";
+            const unread=ChatState.unread[c.userId]||c.unread||0;
+            const last=c.lastMessage?chatEsc(c.lastMessage):`<em style="opacity:.55">Bắt đầu trò chuyện...</em>`;
+            const time=c.lastTime?chatFmtTime(c.lastTime):"";
+            return `<div class="chat-contact" onclick="ChatUI.openConversation(${c.userId},'${chatEsc(c.name)}','${role}')">
+            <div class="c-avatar">${initials}${unread>0?`<span class="c-badge">${unread}</span>`:""}</div>
+            <div class="c-info">
+                <div style="display:flex;align-items:center;gap:5px;margin-bottom:2px">
+                    <span class="c-name">${chatEsc(c.name)}</span>
+                    <span class="c-role-tag ${rtag}">${chatRoleLabel(role)}</span>
+                </div>
+                <div class="c-last">${last}</div>
+            </div>
+            ${time?`<span class="c-time">${time}</span>`:""}
+        </div>`;
+        },
+        filterContacts(q){
+            const f=ChatState.contacts.filter(c=>c.name.toLowerCase().includes(q.toLowerCase()));
+            this.renderContactList(f);
+        },
+        updateUnread(){
+            const total=Object.values(ChatState.unread).reduce((a,b)=>a+b,0);
+            const b=document.getElementById("chatFabBadge");
+            b.textContent=total; b.style.display=total>0?"":"none";
+        },
+        async openConversation(userId, name, role){
+            ChatState.currentPartner={userId,name,role};
+            ChatState.unread[userId]=0; this.updateUnread();
+            document.getElementById("chatContactView").style.display="none";
+            document.getElementById("chatMsgView").classList.add("active");
+            document.getElementById("chatPartnerAvatar").textContent=(name||"?")[0].toUpperCase();
+            document.getElementById("chatPartnerName").textContent=name;
+            document.getElementById("chatPartnerRole").textContent=chatRoleLabel(role);
+            const container=document.getElementById("chatMessages");
+            container.innerHTML=`<div class="chat-empty-state" style="padding:30px 0"><span class="spinner"></span></div>`;
+            try{
+                const res=await chatApiGet("/chat/history?userId="+ChatState.myId+"&partnerId="+userId+"&page=0&size=50");
+                ChatState.messages[userId]=res.data||[];
+            } catch(_){ if(!ChatState.messages[userId]) ChatState.messages[userId]=[]; }
+            this.renderMessages(userId); this.scrollMessages();
+            document.getElementById("chatInput").focus();
+        },
+        renderMessages(pid){
+            const msgs=ChatState.messages[pid]||[];
+            const container=document.getElementById("chatMessages");
+            if(!msgs.length){ container.innerHTML=`<div class="chat-empty-state" style="padding:40px 0"><i class="bi bi-chat-square-text"></i><span>Chưa có tin nhắn</span></div>`; return; }
+            let lastDate="";
+            container.innerHTML=msgs.map(msg=>{
+                const isMe=msg.senderId===ChatState.myId;
+                const dl=chatDateLabel(msg.timestamp);
+                let sep="";
+                if(dl!==lastDate){ lastDate=dl; sep=`<div class="msg-date-sep">${dl}</div>`; }
+                return sep+this._bubbleHTML(msg,isMe);
+            }).join("");
+        },
+        _bubbleHTML(msg,isMe){
+            return `<div class="msg-bubble-wrap ${isMe?"me":"them"}">
+            ${!isMe?`<div class="msg-sender-name">${chatEsc(msg.senderName||"")}</div>`:""}
+            <div class="msg-bubble">${chatEsc(msg.content)}</div>
+            <div class="msg-time">${chatFmtTime(msg.timestamp)}</div>
+        </div>`;
+        },
+        appendBubble(msg,isMe){
+            const container=document.getElementById("chatMessages");
+            const empty=container.querySelector(".chat-empty-state"); if(empty) empty.remove();
+            const div=document.createElement("div");
+            div.innerHTML=this._bubbleHTML(msg,isMe);
+            container.appendChild(div.firstElementChild);
+        },
+        scrollMessages(){ const el=document.getElementById("chatMessages"); setTimeout(()=>{ el.scrollTop=el.scrollHeight; },50); },
+        backToList(){
+            ChatState.currentPartner=null;
+            document.getElementById("chatMsgView").classList.remove("active");
+            document.getElementById("chatContactView").style.display="flex";
+            this.renderContactList(ChatState.contacts);
+        },
+        send(){
+            const input=document.getElementById("chatInput");
+            const content=input.value.trim();
+            if(!content||!ChatState.currentPartner) return;
+            const pid=ChatState.currentPartner.userId;
+            const msg=ChatWS.send(pid,content);
+            input.value=""; input.style.height="auto";
+            if(msg){
+                const sent={...msg,senderId:ChatState.myId,senderName:ChatState.myName,timestamp:new Date().toISOString()};
+                if(!ChatState.messages[pid]) ChatState.messages[pid]=[];
+                ChatState.messages[pid].push(sent);
+                this.appendBubble(sent,true); this.scrollMessages();
+            }
+        },
+        onKey(e){
+            if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); this.send(); }
+            const ta=e.target; ta.style.height="auto"; ta.style.height=Math.min(ta.scrollHeight,90)+"px";
+        },
+    };
+
+    document.addEventListener("DOMContentLoaded", ()=>{ ChatWS.connect(); });
+    window.openChatWith=(userId,name,role)=>{ if(!ChatUI.open) ChatUI.toggle(); ChatUI.openConversation(userId,name,role); };
+</script>
+
+</body>
+</html>
